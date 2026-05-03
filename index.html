@@ -1,0 +1,1288 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>授業分析ダッシュボード - 6年4組</title>
+<style>
+  /* ============================================
+     ベーススタイル
+     ============================================ */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif;
+    background: #f5f7fa;
+    color: #2c3e50;
+    line-height: 1.6;
+    padding: 20px;
+  }
+  .container { max-width: 1200px; margin: 0 auto; }
+
+  /* ヘッダー */
+  header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 24px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  }
+  header h1 { font-size: 1.8em; margin-bottom: 4px; }
+  header p { opacity: 0.9; font-size: 0.95em; }
+
+  /* ============================================
+     期間選択ボタン
+     ============================================ */
+  .period-selector {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    background: white;
+    padding: 12px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    flex-wrap: wrap;
+  }
+  .period-btn {
+    flex: 1;
+    min-width: 80px;
+    padding: 10px 16px;
+    border: 2px solid #e1e8ed;
+    background: white;
+    color: #5a6c7d;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s;
+    font-size: 0.95em;
+  }
+  .period-btn:hover { background: #f0f3f7; border-color: #667eea; }
+  .period-btn.active {
+    background: #667eea;
+    color: white;
+    border-color: #667eea;
+    box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3);
+  }
+
+  /* ============================================
+     メインレイアウト
+     ============================================ */
+  .main-grid {
+    display: grid;
+    grid-template-columns: minmax(320px, 1fr) 2fr;
+    gap: 20px;
+  }
+  @media (max-width: 768px) {
+    .main-grid { grid-template-columns: 1fr; }
+  }
+
+  /* カレンダー */
+  .calendar-card {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    align-self: flex-start;
+  }
+  .calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+  .calendar-header h2 { font-size: 1.2em; color: #2c3e50; }
+  .nav-btn {
+    background: #f0f3f7;
+    border: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1.2em;
+    color: #5a6c7d;
+    transition: all 0.2s;
+  }
+  .nav-btn:hover { background: #667eea; color: white; }
+
+  .calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+  }
+  .day-name {
+    text-align: center;
+    font-weight: 600;
+    color: #95a5a6;
+    padding: 8px 0;
+    font-size: 0.85em;
+  }
+  .day-name:nth-child(1) { color: #e74c3c; }
+  .day-name:nth-child(7) { color: #3498db; }
+
+  .day-cell {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.15s;
+    position: relative;
+    background: #f5f5f5;
+    color: #bdc3c7;
+    font-size: 0.95em;
+  }
+  .day-cell.empty { background: transparent; cursor: default; }
+  .day-cell.no-data { background: #f5f7fa; color: #95a5a6; }
+  .day-cell.no-data:hover { background: #ebeef2; }
+  .day-cell.has-data {
+    background: #d4dffc;
+    color: #2c3e50;
+    font-weight: 700;
+  }
+  .day-cell.has-data:hover {
+    background: #a8bff8;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(102, 126, 234, 0.25);
+  }
+  .day-cell.selected {
+    background: #667eea !important;
+    color: white !important;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  }
+  .day-cell.has-data::after {
+    content: "";
+    position: absolute;
+    bottom: 4px;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: #667eea;
+  }
+  /* 写真がある日は緑のドット追加 */
+  .day-cell.has-photo::before {
+    content: "📷";
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    font-size: 0.6em;
+    opacity: 0.7;
+  }
+  .day-cell.selected::after { background: white; }
+
+  .legend {
+    display: flex;
+    gap: 16px;
+    margin-top: 16px;
+    font-size: 0.8em;
+    color: #7f8c8d;
+    flex-wrap: wrap;
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-box { width: 14px; height: 14px; border-radius: 4px; }
+
+  /* ============================================
+     詳細パネル
+     ============================================ */
+  .detail-card {
+    background: white;
+    padding: 24px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    min-height: 400px;
+  }
+  .detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid #f0f3f7;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .detail-date { font-size: 1.4em; font-weight: 700; color: #2c3e50; }
+  .detail-meta { display: flex; gap: 8px; flex-wrap: wrap; }
+  .badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 16px;
+    font-size: 0.85em;
+    font-weight: 600;
+  }
+  .badge-subject { background: #e3f2fd; color: #1976d2; }
+  .badge-class { background: #f3e5f5; color: #7b1fa2; }
+  .badge-positive { background: #fff3e0; color: #e65100; }
+  .badge-photos { background: #e8f5e9; color: #2e7d32; }
+
+  .section { margin-bottom: 18px; }
+  .section-title {
+    font-size: 0.9em;
+    font-weight: 700;
+    color: #667eea;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .section-title::before {
+    content: "";
+    width: 3px;
+    height: 14px;
+    background: #667eea;
+    border-radius: 2px;
+  }
+  .section-content {
+    color: #34495e;
+    line-height: 1.7;
+    padding-left: 12px;
+    white-space: pre-wrap;
+    font-size: 0.95em;
+  }
+
+  /* ============================================
+     写真ギャラリー
+     ============================================ */
+  .photo-section {
+    margin-bottom: 18px;
+    padding: 16px;
+    background: #fafbfc;
+    border-radius: 10px;
+    border: 1px solid #e1e8ed;
+  }
+  .photo-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .photo-category-tabs {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+  .category-tab {
+    padding: 4px 12px;
+    background: white;
+    border: 1px solid #e1e8ed;
+    border-radius: 16px;
+    cursor: pointer;
+    font-size: 0.8em;
+    color: #5a6c7d;
+    transition: all 0.2s;
+  }
+  .category-tab:hover { background: #f0f3f7; }
+  .category-tab.active {
+    background: #667eea;
+    color: white;
+    border-color: #667eea;
+  }
+
+  .photo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px;
+  }
+  .photo-thumb {
+    position: relative;
+    aspect-ratio: 1;
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    background: #ebeef2;
+    transition: all 0.2s;
+  }
+  .photo-thumb:hover {
+    transform: scale(1.03);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+  .photo-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .photo-thumb-caption {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+    color: white;
+    padding: 8px;
+    font-size: 0.75em;
+    line-height: 1.3;
+  }
+  .photo-category-label {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    background: rgba(102, 126, 234, 0.95);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.7em;
+    font-weight: 600;
+  }
+  .photo-delete-btn {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    background: rgba(231, 76, 60, 0.9);
+    color: white;
+    border: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8em;
+    z-index: 5;
+  }
+  .photo-thumb:hover .photo-delete-btn { display: flex; }
+
+  /* ドロップゾーン */
+  .photo-dropzone {
+    border: 2px dashed #c8d0db;
+    border-radius: 10px;
+    padding: 24px;
+    text-align: center;
+    color: #95a5a6;
+    transition: all 0.2s;
+    cursor: pointer;
+    margin-top: 10px;
+  }
+  .photo-dropzone:hover, .photo-dropzone.dragover {
+    border-color: #667eea;
+    background: #f0f3f7;
+    color: #667eea;
+  }
+  .photo-dropzone .icon { font-size: 1.8em; margin-bottom: 6px; }
+  .photo-dropzone p { font-size: 0.9em; margin: 4px 0; }
+  .photo-dropzone .hint { font-size: 0.8em; opacity: 0.7; }
+  .photo-dropzone input[type="file"] { display: none; }
+
+  /* カテゴリ選択モーダル */
+  .category-picker {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 999;
+    align-items: center;
+    justify-content: center;
+  }
+  .category-picker.show { display: flex; }
+  .category-picker-card {
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    max-width: 400px;
+    width: 90%;
+  }
+  .category-picker-card h3 { margin-bottom: 16px; }
+  .category-picker-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .category-picker-buttons button {
+    padding: 12px;
+    border: 2px solid #e1e8ed;
+    background: white;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.95em;
+    transition: all 0.2s;
+    text-align: left;
+  }
+  .category-picker-buttons button:hover {
+    border-color: #667eea;
+    background: #f0f3f7;
+  }
+  .category-picker input[type="text"] {
+    width: 100%;
+    padding: 10px;
+    border: 2px solid #e1e8ed;
+    border-radius: 8px;
+    font-size: 0.95em;
+    margin-bottom: 12px;
+  }
+  .category-picker .actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+  }
+  .category-picker .actions button {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+  }
+  .btn-cancel { background: #ecf0f1; color: #5a6c7d; }
+  .btn-save { background: #667eea; color: white; }
+
+  /* ライトボックス */
+  .lightbox {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.92);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    cursor: pointer;
+  }
+  .lightbox.show { display: flex; }
+  .lightbox-content {
+    max-width: 95%;
+    max-height: 90%;
+    cursor: default;
+  }
+  .lightbox img {
+    max-width: 100%;
+    max-height: 80vh;
+    border-radius: 8px;
+    display: block;
+  }
+  .lightbox-caption {
+    color: white;
+    text-align: center;
+    margin-top: 16px;
+    font-size: 1em;
+  }
+  .lightbox-close {
+    position: absolute;
+    top: 20px;
+    right: 24px;
+    background: none;
+    border: none;
+    color: white;
+    font-size: 2em;
+    cursor: pointer;
+    line-height: 1;
+  }
+
+  /* 空状態 */
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: #95a5a6;
+  }
+  .empty-state .icon { font-size: 3em; margin-bottom: 12px; opacity: 0.5; }
+  .empty-state h3 { font-size: 1.1em; margin-bottom: 8px; }
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .stat-card {
+    background: linear-gradient(135deg, #f5f7fa 0%, #e9eef5 100%);
+    padding: 16px;
+    border-radius: 10px;
+    border-left: 4px solid #667eea;
+  }
+  .stat-label { font-size: 0.8em; color: #7f8c8d; margin-bottom: 4px; }
+  .stat-value { font-size: 1.6em; font-weight: 700; color: #2c3e50; }
+
+  .entry-list { display: flex; flex-direction: column; gap: 12px; }
+  .entry-item {
+    background: #f9fafc;
+    padding: 14px;
+    border-radius: 8px;
+    border-left: 3px solid #667eea;
+  }
+  .entry-date {
+    font-weight: 700;
+    color: #667eea;
+    font-size: 0.9em;
+    margin-bottom: 6px;
+  }
+  .entry-summary { color: #34495e; font-size: 0.9em; }
+
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: #f5f7fa; }
+  ::-webkit-scrollbar-thumb { background: #c8cfd6; border-radius: 4px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <h1>📊 授業分析ダッシュボード</h1>
+    <p>6年4組 / 自立した学習者育成プロジェクト</p>
+  </header>
+
+  <div class="period-selector">
+    <button class="period-btn active" data-period="day">📅 日</button>
+    <button class="period-btn" data-period="week">📆 週</button>
+    <button class="period-btn" data-period="month">🗓️ 月</button>
+    <button class="period-btn" data-period="half">📈 半年</button>
+    <button class="period-btn" data-period="year">📊 年間</button>
+  </div>
+
+  <div class="main-grid">
+
+    <div class="calendar-card">
+      <div class="calendar-header">
+        <button class="nav-btn" id="prevMonth">‹</button>
+        <h2 id="monthLabel">2026年 4月</h2>
+        <button class="nav-btn" id="nextMonth">›</button>
+      </div>
+      <div class="calendar-grid" id="calendarGrid">
+        <div class="day-name">日</div>
+        <div class="day-name">月</div>
+        <div class="day-name">火</div>
+        <div class="day-name">水</div>
+        <div class="day-name">木</div>
+        <div class="day-name">金</div>
+        <div class="day-name">土</div>
+      </div>
+      <div class="legend">
+        <div class="legend-item">
+          <div class="legend-box" style="background: #d4dffc;"></div>
+          <span>分析データ</span>
+        </div>
+        <div class="legend-item">
+          <span>📷</span>
+          <span>写真あり</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-box" style="background: #667eea;"></div>
+          <span>選択中</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="detail-card" id="detailCard">
+      <div class="empty-state">
+        <div class="icon">📋</div>
+        <h3>日付を選択してください</h3>
+        <p>カレンダーの色付きの日付をクリックすると、<br>その日の分析結果が表示されます。</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- カテゴリ選択モーダル -->
+<div class="category-picker" id="categoryPicker">
+  <div class="category-picker-card">
+    <h3>📷 写真のカテゴリを選択</h3>
+    <div class="category-picker-buttons" id="categoryButtons"></div>
+    <input type="text" id="captionInput" placeholder="キャプション（任意）：例「丸つけレベルの板書」">
+    <div class="actions">
+      <button class="btn-cancel" id="cancelUpload">キャンセル</button>
+      <button class="btn-save" id="confirmUpload">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ライトボックス（拡大表示） -->
+<div class="lightbox" id="lightbox">
+  <button class="lightbox-close" id="lightboxClose">×</button>
+  <div class="lightbox-content">
+    <img id="lightboxImg" src="" alt="">
+    <div class="lightbox-caption" id="lightboxCaption"></div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   📌 分析データ
+   ★ 新しい日のデータはここに追加
+   ★ 写真は2種類の追加方法があります：
+     ① data に最初から photos を入れる（URLまたは相対パス）
+     ② ダッシュボード上でドラッグ＆ドロップで追加（localStorageに保存）
+   ============================================================ */
+const ANALYSIS_DATA = [
+  {
+    date: "2026-04-10",
+    subject: "国語・図工・道徳・学活",
+    class: "6年4組",
+    good: "「丸つけのレベル1〜5」を言語化し、自己評価の基準を明示。子どもの倫理感に訴える指導が秀逸。詩「準備」では同じ問いを3回読み直し、解釈を段階的に深化させた。図工の自画像では教師自身が動画で予習する姿を開示し、学び続ける大人のモデルを示した。",
+    improve: "教師の発話量が多く、語りが長くなる場面あり。指示の文型化（誰が・何を・どこへ）と、語りの3分制限ルールの導入が望ましい。",
+    growth: "教師：観察→記録→称賛のサイクルを確立。\n子ども：椅子運びを自走で完了。指示なしで分担して動ける状態に到達。",
+    independence: "主体性：係決めで子どもが自発的にアイデアを出し合った。\n自己調整：丸つけレベル1〜5の枠組みが提示された。\n協働：「目と耳と心で10倍聞く」を学級の合言葉に。",
+    next: "椅子運び等の指示を1文で出すルール化／聞くの実技化／丸つけレベル4の見本掲示／少数意見の制度化",
+    positive_count: 30,
+    photos: []  // ← 写真をここに直接追加することも可能
+  },
+  {
+    date: "2026-04-17",
+    subject: "全教科（1週間総括）",
+    class: "6年4組",
+    good: "始業式から1週間の振り返り。「目と耳と心で10倍聞く」「ケテブレ」「プラスレ」を導入。学級通信で4人の子の宿題写真を掲載、保護者にもケテブレを浸透させた。火曜日の宿題が前日よりパワーアップする好循環が確立。",
+    improve: "教師自身が「話しすぎ」を自覚済み。熱い話は3分まで、を子どもと約束する仕組みが必要。",
+    growth: "教師：観察→記録→称賛のサイクル確立／自己開示の技術。\n子ども：宿題のパワーアップ／プラスレを自発的に拡張する子の出現／スペシャル問題を自作する子の出現。",
+    independence: "主体性：自学でスペシャル問題を作成する子。\n自己調整：プラスレを拡張する子。\n協働：学級通信で互いを参照する文化。",
+    next: "算数版ケテブレの分析テンプレ作成／写真記録の代替手段確保／称賛軸の多様化／教師の発話量タイマー化",
+    positive_count: 25,
+    photos: []
+  },
+  {
+    date: "2026-04-22",
+    subject: "図工・算数・国語・道徳",
+    class: "6年4組",
+    good: "教師が30分不在の間、自クラスは黒板の指示だけでケテブレを使って自走できた（最大の成果）。給食事故を機に「シンマトリックス（お花畑/月/太陽/ブラックホール）」を導入。即日「本を読む選択」という具体行動に反映された。",
+    improve: "シンマトリックスの4象限が比喩過多で、子どもが象限を取り違える可能性。各象限の1行定義を掲示物に併記すべき。",
+    growth: "教師：指導法を改める柔軟性／タイミングを読む力。\n子ども：教師不在で30分自走可能／シンマトリックス導入後、本を読む選択が増えた。",
+    independence: "主体性：教師不在で自走／給食準備の先回り。\n自己調整：ケテブレで学習法を選ぶ／シンマトリックスで状態を見立てる。\n協働：おかわり場面の事故を全体で振り返る。",
+    next: "「嫌だな」と言った子の聞き取り／シンマトリックスに1行定義を追加／学年展開はリクエスト待ち／意図的な「教師不在時間」の設計",
+    positive_count: 22,
+    photos: []
+  },
+  {
+    date: "2026-04-24",
+    subject: "学級経営・算数",
+    class: "6年4組",
+    good: "「何ページですか」を「今日は何しますか」に置き換える指導が秀逸。ケテブレ2周回し（教科書→自分で）の構造を提示。シンマトリックスの「太陽」象限を本格導入し、協働を主体性の中に組み込んだ。",
+    improve: "計画チェックの物理的負荷が高い。週2〜3回に絞るか、付箋で優先順位をつける効率化が必要。",
+    growth: "教師：「子どもの力を止めない／伸ばす責任」という哲学に到達。\n子ども：給食準備が学校で3番目に早い／ケテブレ2周可能／太陽の意味を理解。",
+    independence: "主体性：「何ページ」を「何しますか」へ／給食5分前準備。\n自己調整：ケテブレ2周回し／2軸振り返り。\n協働：太陽象限の明示化により、友達に聞くが価値ある選択に。",
+    next: "「録音ボタン」をルーティン化／配り係への先生チェック日サイン／シンマトリックスに太陽の例を追記／2軸振り返りのテンプレ化",
+    positive_count: 18,
+    photos: []
+  },
+  {
+    date: "2026-04-27",
+    subject: "国語・算数・道徳",
+    class: "6年4組",
+    good: "自己採点の倫理を「自分への嘘は最大の敵」に深化。嘘をついた児童に「書き換える前に消してくれた、嬉しかったね」と承認＋関係修復。道徳「自由」では子どもが「自由には責任が伴う」を自力で言語化。",
+    improve: "嘘をついた子の気持ちの収束まで届いたかが不明。翌日の声かけが必須。",
+    growth: "教師：個別倫理実践と集団哲学探究を同日に実施できる成熟。\n子ども：「言葉が軽い」など高度な分析発言／少数意見も主張できる。",
+    independence: "主体性：「自由」を子ども自身が定義／嘘をついた子の自己修正。\n自己調整：テスト予行演習で自分のレベルを測る。\n協働：友達に聞く時も気遣う関係。\n倫理：自分への嘘＝最大の敵。",
+    next: "嘘をついた児童への翌日声かけ／「自由」授業の続編設計／テスト後の振り返りプロトコル／教師の語り総量の管理",
+    positive_count: 18,
+    photos: []
+  },
+  {
+    date: "2026-04-28",
+    subject: "国語・算数・学級活動",
+    class: "6年4組",
+    good: "学級目標「希望永続 / One for all, All for one」が決定。子ども提案による民主的合意形成プロセスが模範的。算数本テスト平均93点、100点取得者19人、最高215点という客観成果。学級通信解説で7名以上の個別承認の連鎖。",
+    improve: "学級目標決定が一人の子の準備に依存。次回は全員が事前準備してくる仕掛けが必要。",
+    growth: "教師：「教室にいる時間は楽しい」と言える状態に到達／自己効力感の確立。\n子ども：学級目標を子どもが提案・決定／プラス点12人挑戦。",
+    independence: "主体性：ゆうなさんが学級目標を考えてくる／予習が複数の子に広がる。\n自己調整：大分析でテストを学習プロセスに転換／2周回しが定着。\n協働：学級通信で互いを参照する文化／個別承認の連鎖。",
+    next: "学級目標の合意形成プロトコル整備／「言葉が軽い」発言児童の継続発見／プラス点参加率向上キャンペーン",
+    positive_count: 20,
+    photos: []
+  },
+  {
+    date: "2026-04-30",
+    subject: "算数・体育",
+    class: "6年4組",
+    good: "「試行錯誤」の漢字を分解し、ケテブレ＝試行錯誤の構造化として位置づけ。「算数の勉強しながら生きる力をつけてる」と教科を超えた学びを明示。GW前の「ご褒美宿題保留」判断で集団責任の概念を導入。",
+    improve: "試行錯誤の語源解説と「生きる力」への接続が6分の長い語りに。重要な概念ほど短く、具体例1つで十分なケースも。",
+    growth: "教師：「教科を超えた生きる力」を明示できる教育観。\n子ども：算数100点取得者19人／プラス点12人挑戦／最高215点。",
+    independence: "主体性：大分析で自己評価／プラス点12人挑戦。\n自己調整：試行錯誤の構造を理解／3要素＋2要素の分析。\n協働：「声かけ合う」が学級文化として明示。\n長期価値：算数を通じて生きる力。",
+    next: "GW中の教師の完全休養／GW明け朝3分の概念再起動／文字と式の躓き対策プリント1枚／学級目標「希望永続」の運用設計",
+    positive_count: 15,
+    photos: []
+  }
+  // ★ 新しいデータはここに追加してください
+];
+
+/* 写真のカテゴリ */
+const PHOTO_CATEGORIES = ["板書", "ノート", "掲示物", "プリント", "教室", "その他"];
+
+/* localStorage キー（ユーザーがアップロードした写真用） */
+const PHOTO_STORAGE_KEY = "classroom_dashboard_photos_v1";
+
+/* ============================================================
+   📌 状態管理
+   ============================================================ */
+let currentDate = new Date(2026, 3, 1);
+let selectedDate = null;
+let currentPeriod = "day";
+let activeCategory = "すべて";
+let pendingUpload = null; // {date, dataUrl, fileName}
+
+/* ============================================================
+   📌 写真ストレージ操作
+   ============================================================ */
+function loadUserPhotos() {
+  try {
+    const raw = localStorage.getItem(PHOTO_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    console.error("写真の読み込みに失敗", e);
+    return {};
+  }
+}
+
+function saveUserPhotos(photos) {
+  try {
+    localStorage.setItem(PHOTO_STORAGE_KEY, JSON.stringify(photos));
+  } catch (e) {
+    alert("写真の保存に失敗しました。容量制限の可能性があります。\n" + e.message);
+  }
+}
+
+function getPhotosForDate(dateStr) {
+  // ANALYSIS_DATA に最初から入っている写真
+  const data = getDataByDate(dateStr);
+  const builtIn = (data && data.photos) ? data.photos : [];
+  // ユーザーが追加した写真（localStorage）
+  const userPhotos = loadUserPhotos();
+  const userForDate = userPhotos[dateStr] || [];
+  return [...builtIn, ...userForDate];
+}
+
+function addUserPhoto(dateStr, photo) {
+  const photos = loadUserPhotos();
+  if (!photos[dateStr]) photos[dateStr] = [];
+  photos[dateStr].push({
+    ...photo,
+    id: Date.now() + Math.random(),
+    isUserPhoto: true
+  });
+  saveUserPhotos(photos);
+}
+
+function deleteUserPhoto(dateStr, photoId) {
+  const photos = loadUserPhotos();
+  if (photos[dateStr]) {
+    photos[dateStr] = photos[dateStr].filter(p => p.id !== photoId);
+    saveUserPhotos(photos);
+  }
+}
+
+/* ============================================================
+   📌 ユーティリティ
+   ============================================================ */
+function formatDate(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+function formatDateJP(dateStr) {
+  const d = new Date(dateStr);
+  const dayNames = ["日", "月", "火", "水", "木", "金", "土"];
+  return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日（${dayNames[d.getDay()]}）`;
+}
+function getDataByDate(dateStr) {
+  return ANALYSIS_DATA.find(d => d.date === dateStr);
+}
+function getDataInRange(startDate, endDate) {
+  return ANALYSIS_DATA.filter(d => {
+    const date = new Date(d.date);
+    return date >= startDate && date <= endDate;
+  });
+}
+
+/* ============================================================
+   📌 カレンダー描画
+   ============================================================ */
+function renderCalendar() {
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+  document.getElementById("monthLabel").textContent = `${year}年 ${month + 1}月`;
+
+  const grid = document.getElementById("calendarGrid");
+  while (grid.children.length > 7) grid.removeChild(grid.lastChild);
+
+  const firstDay = new Date(year, month, 1).getDay();
+  const lastDate = new Date(year, month + 1, 0).getDate();
+
+  for (let i = 0; i < firstDay; i++) {
+    const cell = document.createElement("div");
+    cell.className = "day-cell empty";
+    grid.appendChild(cell);
+  }
+
+  for (let d = 1; d <= lastDate; d++) {
+    const date = new Date(year, month, d);
+    const dateStr = formatDate(date);
+    const hasData = !!getDataByDate(dateStr);
+    const hasPhoto = getPhotosForDate(dateStr).length > 0;
+
+    const cell = document.createElement("div");
+    cell.className = "day-cell " + (hasData ? "has-data" : "no-data");
+    if (hasPhoto) cell.classList.add("has-photo");
+    cell.textContent = d;
+    cell.dataset.date = dateStr;
+
+    if (selectedDate === dateStr) cell.classList.add("selected");
+
+    cell.addEventListener("click", () => {
+      selectedDate = dateStr;
+      activeCategory = "すべて";
+      renderCalendar();
+      renderDetail();
+    });
+
+    grid.appendChild(cell);
+  }
+}
+
+/* ============================================================
+   📌 詳細パネル描画
+   ============================================================ */
+function renderDetail() {
+  const card = document.getElementById("detailCard");
+
+  if (!selectedDate) {
+    card.innerHTML = `
+      <div class="empty-state">
+        <div class="icon">📋</div>
+        <h3>日付を選択してください</h3>
+        <p>カレンダーの色付きの日付をクリックすると、<br>その日の分析結果が表示されます。</p>
+      </div>`;
+    return;
+  }
+
+  switch (currentPeriod) {
+    case "day":   renderDayDetail(card); break;
+    case "week":  renderRangeDetail(card, getWeekRange(selectedDate), "週"); break;
+    case "month": renderRangeDetail(card, getMonthRange(selectedDate), "月"); break;
+    case "half":  renderRangeDetail(card, getHalfRange(selectedDate), "半年"); break;
+    case "year":  renderRangeDetail(card, getYearRange(selectedDate), "年間"); break;
+  }
+}
+
+/* ===== 単日表示 ===== */
+function renderDayDetail(card) {
+  const data = getDataByDate(selectedDate);
+  const photos = getPhotosForDate(selectedDate);
+
+  if (!data) {
+    // データがなくても写真追加はできる
+    card.innerHTML = `
+      <div class="detail-header">
+        <div>
+          <div class="detail-date">${formatDateJP(selectedDate)}</div>
+          <p style="color:#7f8c8d; font-size:0.9em; margin-top:4px;">分析データはまだありません</p>
+        </div>
+      </div>
+      ${renderPhotoSection(selectedDate, photos)}`;
+    bindPhotoEvents();
+    return;
+  }
+
+  card.innerHTML = `
+    <div class="detail-header">
+      <div>
+        <div class="detail-date">${formatDateJP(data.date)}</div>
+      </div>
+      <div class="detail-meta">
+        <span class="badge badge-subject">📚 ${data.subject}</span>
+        <span class="badge badge-class">👥 ${data.class}</span>
+        <span class="badge badge-positive">⭐ 肯定発言 ${data.positive_count}回</span>
+        ${photos.length > 0 ? `<span class="badge badge-photos">📷 写真 ${photos.length}枚</span>` : ""}
+      </div>
+    </div>
+
+    ${renderPhotoSection(selectedDate, photos)}
+
+    <div class="section">
+      <div class="section-title">よかったところ</div>
+      <div class="section-content">${data.good}</div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">改善点</div>
+      <div class="section-content">${data.improve}</div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">成長の記録</div>
+      <div class="section-content">${data.growth}</div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">自立した学習者との関連</div>
+      <div class="section-content">${data.independence}</div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">次回への課題</div>
+      <div class="section-content">${data.next}</div>
+    </div>
+  `;
+  bindPhotoEvents();
+}
+
+/* ===== 写真セクションのHTML ===== */
+function renderPhotoSection(dateStr, photos) {
+  // カテゴリタブ
+  const categories = ["すべて", ...PHOTO_CATEGORIES];
+  const categoryTabs = categories.map(cat => {
+    const count = cat === "すべて" ? photos.length : photos.filter(p => p.category === cat).length;
+    if (cat !== "すべて" && count === 0) return ""; // 0件のカテゴリは非表示
+    return `<div class="category-tab ${activeCategory === cat ? "active" : ""}" data-category="${cat}">${cat} ${count > 0 ? `(${count})` : ""}</div>`;
+  }).join("");
+
+  // フィルタリング
+  const filteredPhotos = activeCategory === "すべて"
+    ? photos
+    : photos.filter(p => p.category === activeCategory);
+
+  // サムネイルグリッド
+  const thumbs = filteredPhotos.map(photo => `
+    <div class="photo-thumb" data-url="${photo.url}" data-caption="${escapeHtml(photo.caption || '')}">
+      <span class="photo-category-label">${photo.category}</span>
+      ${photo.isUserPhoto ? `<button class="photo-delete-btn" data-photo-id="${photo.id}" title="削除">×</button>` : ""}
+      <img src="${photo.url}" alt="${escapeHtml(photo.caption || '')}">
+      ${photo.caption ? `<div class="photo-thumb-caption">${escapeHtml(photo.caption)}</div>` : ""}
+    </div>
+  `).join("");
+
+  return `
+    <div class="photo-section">
+      <div class="photo-section-header">
+        <div class="section-title" style="margin-bottom:0;">📷 写真ギャラリー</div>
+      </div>
+      ${photos.length > 0 ? `<div class="photo-category-tabs">${categoryTabs}</div>` : ""}
+      ${filteredPhotos.length > 0 ? `<div class="photo-grid">${thumbs}</div>` : ""}
+      <div class="photo-dropzone" id="photoDropzone">
+        <input type="file" id="photoFileInput" accept="image/*" multiple>
+        <div class="icon">📤</div>
+        <p><strong>写真をドラッグ＆ドロップ</strong> または クリックして選択</p>
+        <p class="hint">板書・ノート・掲示物などを記録できます（複数枚OK）</p>
+      </div>
+    </div>
+  `;
+}
+
+/* HTMLエスケープ */
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+/* ===== 写真関連のイベント ===== */
+function bindPhotoEvents() {
+  // カテゴリタブ
+  document.querySelectorAll(".category-tab").forEach(tab => {
+    tab.addEventListener("click", () => {
+      activeCategory = tab.dataset.category;
+      renderDetail();
+    });
+  });
+
+  // サムネイルクリック→ライトボックス
+  document.querySelectorAll(".photo-thumb").forEach(thumb => {
+    thumb.addEventListener("click", (e) => {
+      if (e.target.classList.contains("photo-delete-btn")) return;
+      openLightbox(thumb.dataset.url, thumb.dataset.caption);
+    });
+  });
+
+  // 削除ボタン
+  document.querySelectorAll(".photo-delete-btn").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (confirm("この写真を削除しますか？")) {
+        deleteUserPhoto(selectedDate, parseFloat(btn.dataset.photoId));
+        renderCalendar();
+        renderDetail();
+      }
+    });
+  });
+
+  // ドロップゾーン
+  const dropzone = document.getElementById("photoDropzone");
+  const fileInput = document.getElementById("photoFileInput");
+  if (dropzone) {
+    dropzone.addEventListener("click", () => fileInput.click());
+    dropzone.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      dropzone.classList.add("dragover");
+    });
+    dropzone.addEventListener("dragleave", () => dropzone.classList.remove("dragover"));
+    dropzone.addEventListener("drop", (e) => {
+      e.preventDefault();
+      dropzone.classList.remove("dragover");
+      handleFiles(e.dataTransfer.files);
+    });
+    fileInput.addEventListener("change", (e) => handleFiles(e.target.files));
+  }
+}
+
+/* ===== ファイル読み込み（base64化） ===== */
+function handleFiles(files) {
+  const fileArray = Array.from(files).filter(f => f.type.startsWith("image/"));
+  if (fileArray.length === 0) {
+    alert("画像ファイルを選択してください。");
+    return;
+  }
+  // 1枚ずつ処理（カテゴリ選択モーダルを出す）
+  processNextFile(fileArray, 0);
+}
+
+function processNextFile(files, index) {
+  if (index >= files.length) return;
+  const file = files[index];
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    pendingUpload = {
+      date: selectedDate,
+      dataUrl: e.target.result,
+      fileName: file.name,
+      remainingFiles: files,
+      currentIndex: index
+    };
+    showCategoryPicker();
+  };
+  reader.readAsDataURL(file);
+}
+
+/* ===== カテゴリ選択モーダル ===== */
+function showCategoryPicker() {
+  const picker = document.getElementById("categoryPicker");
+  const buttons = document.getElementById("categoryButtons");
+  buttons.innerHTML = PHOTO_CATEGORIES.map(cat =>
+    `<button data-category="${cat}">${getCategoryEmoji(cat)} ${cat}</button>`
+  ).join("");
+  document.getElementById("captionInput").value = "";
+  picker.classList.add("show");
+
+  buttons.querySelectorAll("button").forEach(btn => {
+    btn.addEventListener("click", () => {
+      buttons.querySelectorAll("button").forEach(b => b.style.borderColor = "#e1e8ed");
+      btn.style.borderColor = "#667eea";
+      btn.style.background = "#f0f3f7";
+      btn.dataset.selected = "true";
+      buttons.querySelectorAll("button").forEach(b => {
+        if (b !== btn) delete b.dataset.selected;
+      });
+    });
+  });
+}
+
+function getCategoryEmoji(cat) {
+  const map = {
+    "板書": "📋",
+    "ノート": "📓",
+    "掲示物": "🖼️",
+    "プリント": "📄",
+    "教室": "🏫",
+    "その他": "📷"
+  };
+  return map[cat] || "📷";
+}
+
+document.getElementById("cancelUpload").addEventListener("click", () => {
+  document.getElementById("categoryPicker").classList.remove("show");
+  pendingUpload = null;
+});
+
+document.getElementById("confirmUpload").addEventListener("click", () => {
+  if (!pendingUpload) return;
+  const selected = document.querySelector("#categoryButtons button[data-selected='true']");
+  const category = selected ? selected.dataset.category : "その他";
+  const caption = document.getElementById("captionInput").value.trim();
+
+  addUserPhoto(pendingUpload.date, {
+    url: pendingUpload.dataUrl,
+    category: category,
+    caption: caption || pendingUpload.fileName
+  });
+
+  document.getElementById("categoryPicker").classList.remove("show");
+
+  // 次のファイルがあれば続けて処理
+  const next = pendingUpload.currentIndex + 1;
+  const remaining = pendingUpload.remainingFiles;
+  pendingUpload = null;
+  if (next < remaining.length) {
+    setTimeout(() => processNextFile(remaining, next), 100);
+  } else {
+    renderCalendar();
+    renderDetail();
+  }
+});
+
+/* ===== ライトボックス ===== */
+function openLightbox(url, caption) {
+  document.getElementById("lightboxImg").src = url;
+  document.getElementById("lightboxCaption").textContent = caption || "";
+  document.getElementById("lightbox").classList.add("show");
+}
+document.getElementById("lightbox").addEventListener("click", (e) => {
+  if (e.target.id === "lightbox" || e.target.id === "lightboxClose") {
+    document.getElementById("lightbox").classList.remove("show");
+  }
+});
+document.getElementById("lightboxClose").addEventListener("click", () => {
+  document.getElementById("lightbox").classList.remove("show");
+});
+
+/* ===== 期間まとめ表示 ===== */
+function renderRangeDetail(card, range, label) {
+  const items = getDataInRange(range.start, range.end);
+  const totalPositive = items.reduce((sum, d) => sum + (d.positive_count || 0), 0);
+  const subjects = [...new Set(items.flatMap(d => d.subject.split(/[・、]/)))].filter(Boolean);
+  const totalPhotos = items.reduce((sum, d) => sum + getPhotosForDate(d.date).length, 0);
+
+  let header = `
+    <div class="detail-header">
+      <div>
+        <div class="detail-date">${label}まとめ</div>
+        <p style="color:#7f8c8d; font-size:0.9em; margin-top:4px;">
+          ${formatDateJP(formatDate(range.start))} 〜 ${formatDateJP(formatDate(range.end))}
+        </p>
+      </div>
+    </div>`;
+
+  if (items.length === 0) {
+    card.innerHTML = header + `
+      <div class="empty-state">
+        <div class="icon">📭</div>
+        <h3>この${label}には分析データがありません</h3>
+      </div>`;
+    return;
+  }
+
+  const summary = `
+    <div class="summary-grid">
+      <div class="stat-card">
+        <div class="stat-label">分析日数</div>
+        <div class="stat-value">${items.length}日</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">肯定発言合計</div>
+        <div class="stat-value">${totalPositive}回</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">扱った教科数</div>
+        <div class="stat-value">${subjects.length}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">写真合計</div>
+        <div class="stat-value">${totalPhotos}枚</div>
+      </div>
+    </div>`;
+
+  let trendBlock = "";
+  if (currentPeriod === "half" || currentPeriod === "year") {
+    trendBlock = renderTrendAnalysis(items);
+  }
+
+  const entries = items.map(d => {
+    const photos = getPhotosForDate(d.date);
+    const photoStrip = photos.length > 0
+      ? `<div style="display:flex; gap:6px; margin-top:8px; flex-wrap:wrap;">
+          ${photos.slice(0, 4).map(p => `<img src="${p.url}" style="width:60px; height:60px; object-fit:cover; border-radius:4px;" alt="">`).join("")}
+          ${photos.length > 4 ? `<div style="width:60px; height:60px; background:#f0f3f7; display:flex; align-items:center; justify-content:center; border-radius:4px; font-size:0.8em; color:#5a6c7d;">+${photos.length - 4}</div>` : ""}
+        </div>`
+      : "";
+    return `
+      <div class="entry-item">
+        <div class="entry-date">${formatDateJP(d.date)} ｜ ${d.subject}${photos.length > 0 ? ` 📷${photos.length}` : ""}</div>
+        <div class="entry-summary">${d.good.length > 100 ? d.good.substring(0, 100) + "..." : d.good}</div>
+        ${photoStrip}
+      </div>`;
+  }).join("");
+
+  card.innerHTML = header + summary + trendBlock + `
+    <div class="section">
+      <div class="section-title">分析エントリ一覧</div>
+      <div class="entry-list" style="margin-top:8px;">${entries}</div>
+    </div>
+  `;
+}
+
+function renderTrendAnalysis(items) {
+  const sortedByPositive = [...items].sort((a, b) => b.positive_count - a.positive_count);
+  const topDay = sortedByPositive[0];
+  const subjectFreq = {};
+  items.forEach(d => {
+    d.subject.split(/[・、]/).forEach(s => {
+      if (s) subjectFreq[s] = (subjectFreq[s] || 0) + 1;
+    });
+  });
+  const topSubjects = Object.entries(subjectFreq)
+    .sort((a, b) => b[1] - a[1]).slice(0, 3)
+    .map(([s, n]) => `${s}（${n}回）`).join("、");
+
+  return `
+    <div class="section">
+      <div class="section-title">傾向分析</div>
+      <div class="section-content">
+🏆 最も肯定発言が多かった日：${formatDateJP(topDay.date)}（${topDay.positive_count}回）
+
+📚 頻出教科 TOP3：${topSubjects}
+
+📈 期間全体の傾向：${items.length}日分の分析データから、教師の指導モデルが継続的に運用されている様子が見られます。
+      </div>
+    </div>`;
+}
+
+/* ===== 期間範囲計算 ===== */
+function getWeekRange(dateStr) {
+  const d = new Date(dateStr);
+  const dayOfWeek = d.getDay();
+  const start = new Date(d); start.setDate(d.getDate() - dayOfWeek);
+  const end = new Date(start); end.setDate(start.getDate() + 6);
+  return { start, end };
+}
+function getMonthRange(dateStr) {
+  const d = new Date(dateStr);
+  const start = new Date(d.getFullYear(), d.getMonth(), 1);
+  const end = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+  return { start, end };
+}
+function getHalfRange(dateStr) {
+  const d = new Date(dateStr);
+  const start = new Date(d); start.setMonth(d.getMonth() - 5); start.setDate(1);
+  const end = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+  return { start, end };
+}
+function getYearRange(dateStr) {
+  const d = new Date(dateStr);
+  const start = new Date(d.getFullYear(), 0, 1);
+  const end = new Date(d.getFullYear(), 11, 31);
+  return { start, end };
+}
+
+/* ===== イベントリスナー ===== */
+document.getElementById("prevMonth").addEventListener("click", () => {
+  currentDate.setMonth(currentDate.getMonth() - 1);
+  renderCalendar();
+});
+document.getElementById("nextMonth").addEventListener("click", () => {
+  currentDate.setMonth(currentDate.getMonth() + 1);
+  renderCalendar();
+});
+
+document.querySelectorAll(".period-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".period-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    currentPeriod = btn.dataset.period;
+    renderDetail();
+  });
+});
+
+// 初期描画
+renderCalendar();
+if (ANALYSIS_DATA.length > 0) {
+  const latest = ANALYSIS_DATA[ANALYSIS_DATA.length - 1];
+  selectedDate = latest.date;
+  const latestDate = new Date(latest.date);
+  currentDate = new Date(latestDate.getFullYear(), latestDate.getMonth(), 1);
+  renderCalendar();
+  renderDetail();
+}
+</script>
+</body>
+</html>
