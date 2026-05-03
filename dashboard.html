@@ -969,8 +969,8 @@
         <h1>📊 授業分析ダッシュボード</h1>
         <p>6年4組 / 自立した学習者育成プロジェクト</p>
       </div>
-      <button id="obsidianBtn" style="background:rgba(255,255,255,0.2); color:white; border:1px solid rgba(255,255,255,0.4); padding:8px 14px; border-radius:8px; cursor:pointer; font-size:0.9em; font-weight:600; backdrop-filter:blur(4px);">
-        📓 Obsidian連携
+      <button id="dataMenuBtn" title="データの追加・出力" style="background:rgba(255,255,255,0.15); color:white; border:1px solid rgba(255,255,255,0.3); width:38px; height:38px; border-radius:50%; cursor:pointer; font-size:1.1em; line-height:1; display:flex; align-items:center; justify-content:center;">
+        ⋯
       </button>
     </div>
   </header>
@@ -1047,25 +1047,20 @@
   </div>
 </div>
 
-<!-- 📓 Obsidian連携モーダル -->
+<!-- データの追加・出力モーダル -->
 <div class="category-picker" id="obsidianModal">
   <div class="category-picker-card" style="max-width:480px;">
-    <h3>📓 Obsidian連携</h3>
+    <h3>📂 データの追加・出力</h3>
     <div class="category-picker-scroll">
       <p style="font-size:0.85em; color:#5a6c7d; margin-bottom:12px;">
-        分析データをObsidian形式のMarkdownで出力します。
+        分析データの取り込み・書き出しができます。
       </p>
 
-      <!-- Vault名の設定 -->
-      <div style="background:#f5f7ff; border-radius:8px; padding:10px 12px; margin-bottom:14px;">
-        <label style="font-size:0.82em; color:#5a6c7d; display:block; margin-bottom:4px;">
-          Vault名（Obsidianで開くリンク用 / 任意）
-        </label>
-        <input type="text" id="vaultNameInput" placeholder="例：MyVault" style="width:100%; padding:8px 10px; border:1px solid #d4dffc; border-radius:6px; font-size:0.9em;">
-      </div>
+      <!-- 内部識別子（互換のため残す・非表示） -->
+      <input type="hidden" id="vaultNameInput">
 
       <!-- 📤 エクスポート -->
-      <div style="font-size:0.75em; color:#95a5a6; font-weight:700; margin-bottom:6px; letter-spacing:1px;">📤 ダッシュボード → Obsidian</div>
+      <div style="font-size:0.75em; color:#95a5a6; font-weight:700; margin-bottom:6px; letter-spacing:1px;">📤 データを書き出す</div>
       <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:18px;">
         <button class="obsidian-export-btn" data-action="export-current" style="text-align:left; padding:12px 14px; border:2px solid #667eea; background:white; border-radius:10px; cursor:pointer; font-weight:600; color:#667eea; transition:all 0.2s; font-size:0.9em;">
           📄 表示中の日をMarkdownでダウンロード
@@ -1079,36 +1074,18 @@
       </div>
 
       <!-- 📥 インポート -->
-      <div style="font-size:0.75em; color:#95a5a6; font-weight:700; margin-bottom:6px; letter-spacing:1px;">📥 Obsidian → ダッシュボード</div>
+      <div style="font-size:0.75em; color:#95a5a6; font-weight:700; margin-bottom:6px; letter-spacing:1px;">📥 データを取り込む</div>
       <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:14px;">
         <button class="obsidian-export-btn" data-action="download-template" style="text-align:left; padding:12px 14px; border:2px solid #27ae60; background:white; border-radius:10px; cursor:pointer; font-weight:600; color:#27ae60; transition:all 0.2s; font-size:0.9em;">
           📝 入力テンプレートをダウンロード
-          <div style="font-size:0.75em; color:#7f8c8d; font-weight:normal; margin-top:2px;">Obsidianで記入用の空フォーマット</div>
         </button>
         <button class="obsidian-export-btn" data-action="import-markdown" style="text-align:left; padding:12px 14px; border:2px solid #27ae60; background:#f0fff4; border-radius:10px; cursor:pointer; font-weight:600; color:#27ae60; transition:all 0.2s; font-size:0.9em;">
-          📥 Markdownを貼り付けて取り込む
-          <div style="font-size:0.75em; color:#7f8c8d; font-weight:normal; margin-top:2px;">Obsidianで書いた分析を自動解析</div>
+          📥 テキスト/Markdownを貼り付けて取り込む
         </button>
         <button class="obsidian-export-btn" data-action="manage-imports" style="text-align:left; padding:12px 14px; border:1px solid #e1e8ed; background:white; border-radius:10px; cursor:pointer; font-weight:500; color:#7f8c8d; transition:all 0.2s; font-size:0.85em;">
           🗂️ 取り込み済みデータの管理
         </button>
       </div>
-
-      <!-- 使い方ガイド -->
-      <details style="background:#fafbfc; border-radius:6px; padding:10px 12px; font-size:0.85em;">
-        <summary style="cursor:pointer; color:#667eea; font-weight:600;">💡 Obsidianへの取り込み方</summary>
-        <div style="margin-top:10px; line-height:1.7; color:#34495e;">
-          <ol style="padding-left:20px;">
-            <li>上のボタンでmarkdownをダウンロード or コピー</li>
-            <li>Obsidian Vault内の好きな場所（例: <code>授業分析/</code>）に保存 or 貼り付け</li>
-            <li>Obsidianが自動でWikilink（<code>[[けテぶれ]]</code>等）を認識</li>
-            <li>グラフビューで概念のつながりが見える</li>
-          </ol>
-          <div style="margin-top:8px; padding:8px; background:white; border-left:3px solid #667eea; border-radius:0 4px 4px 0;">
-            <strong>含まれる要素</strong>: YAMLフロントマター・タグ・Wikilink（けテぶれ／心マトリクス／＋れ等）・写真参照
-          </div>
-        </div>
-      </details>
     </div>
     <div class="actions">
       <button class="btn-cancel" id="closeObsidianModal">閉じる</button>
@@ -4471,16 +4448,10 @@ tags:
 }
 
 /* === Obsidian連携モーダルのイベント === */
-document.getElementById("obsidianBtn").addEventListener("click", () => {
+document.getElementById("dataMenuBtn").addEventListener("click", () => {
   document.getElementById("obsidianModal").classList.add("show");
-  // 保存済みVault名を復元
-  const saved = localStorage.getItem(OBSIDIAN_VAULT_KEY) || "";
-  document.getElementById("vaultNameInput").value = saved;
 });
 document.getElementById("closeObsidianModal").addEventListener("click", () => {
-  // Vault名を保存
-  const v = document.getElementById("vaultNameInput").value.trim();
-  if (v) localStorage.setItem(OBSIDIAN_VAULT_KEY, v);
   document.getElementById("obsidianModal").classList.remove("show");
 });
 
