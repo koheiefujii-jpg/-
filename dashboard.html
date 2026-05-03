@@ -895,6 +895,62 @@ const PHOTO_CATEGORIES = ["板書", "ノート", "掲示物", "プリント", "�
 /* localStorage キー（ユーザーがアップロードした写真用） */
 const PHOTO_STORAGE_KEY = "classroom_dashboard_photos_v1";
 
+/* 画像圧縮設定 */
+const IMAGE_MAX_DIMENSION = 1280;  // 最大の辺をこのpxに収める
+const IMAGE_QUALITY = 0.82;         // JPEG品質（0〜1）
+
+/* ============================================================
+   画像圧縮関数
+   - Canvasに描画しなおして縮小＋JPEG変換
+   - 5MBの写真が通常200〜500KBになる
+   ============================================================ */
+async function compressImage(dataUrl, maxDimension = IMAGE_MAX_DIMENSION, quality = IMAGE_QUALITY) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      let { width, height } = img;
+      const longest = Math.max(width, height);
+      if (longest > maxDimension) {
+        const scale = maxDimension / longest;
+        width = Math.round(width * scale);
+        height = Math.round(height * scale);
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL("image/jpeg", quality));
+    };
+    img.onerror = reject;
+    img.src = dataUrl;
+  });
+}
+
+/* DataURL のおおよそのバイト数を推定 */
+function getDataUrlSize(dataUrl) {
+  // base64の "data:image/jpeg;base64,..." の後ろを取って、長さ×0.75で実バイト数
+  const base64 = dataUrl.split(",")[1] || "";
+  return Math.round(base64.length * 0.75);
+}
+
+/* localStorage の使用量を計算（バイト） */
+function getStorageUsage() {
+  try {
+    const raw = localStorage.getItem(PHOTO_STORAGE_KEY) || "";
+    return raw.length * 2; // UTF-16なので×2
+  } catch (e) {
+    return 0;
+  }
+}
+
+/* バイトを人間が読みやすい形に */
+function formatBytes(bytes) {
+  if (bytes < 1024) return bytes + " B";
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+  return (bytes / 1024 / 1024).toFixed(1) + " MB";
+}
+
 /* ============================================================
    📌 状態管理
    ============================================================ */
@@ -920,8 +976,19 @@ function loadUserPhotos() {
 function saveUserPhotos(photos) {
   try {
     localStorage.setItem(PHOTO_STORAGE_KEY, JSON.stringify(photos));
+    return true;
   } catch (e) {
-    alert("写真の保存に失敗しました。容量制限の可能性があります。\n" + e.message);
+    const usage = getStorageUsage();
+    alert(
+      "写真の保存に失敗しました（容量制限）。\n\n" +
+      `現在の使用量：約 ${formatBytes(usage)}\n` +
+      `ブラウザの上限：通常 5〜10MB\n\n` +
+      "対処法：\n" +
+      "① 古い写真を削除する（サムネイルにマウスを乗せて × ボタン）\n" +
+      "② 不要な日のデータを整理する\n" +
+      "③ 使用量が多すぎる場合は、画像をさらに圧縮する設定変更が必要です"
+    );
+    return false;
   }
 }
 
@@ -1222,21 +1289,33 @@ function handleFiles(files) {
   processNextFile(fileArray, 0);
 }
 
-function processNextFile(files, index) {
+async function processNextFile(files, index) {
   if (index >= files.length) return;
   const file = files[index];
-  const reader = new FileReader();
-  reader.onload = (e) => {
+  try {
+    const rawDataUrl = await readFileAsDataURL(file);
+    const originalSize = getDataUrlSize(rawDataUrl);
+    // 自動圧縮
+    const compressedDataUrl = await compressImage(rawDataUrl);
+    const compressedSize = getDataUrlSize(compressedDataUrl);
+
     pendingUpload = {
       date: selectedDate,
-      dataUrl: e.target.result,
+      dataUrl: compressedDataUrl,
+      originalSize: originalSize,
+      compressedSize: compressedSize,
       fileName: file.name,
       remainingFiles: files,
       currentIndex: index
     };
     showCategoryPicker();
-  };
-  reader.readAsDataURL(file);
+  } catch (err) {
+    alert("画像の読み込みに失敗しました: " + (err.message || err));
+    // 次の画像に進む
+    if (index + 1 < files.length) {
+      processNextFile(files, index + 1);
+    }
+  }
 }
 
 /* ===== カテゴリ選択モーダル ===== */
@@ -1265,7 +1344,16 @@ function showCategoryPicker() {
     const total = pendingUpload.remainingFiles.length;
     const current = pendingUpload.currentIndex + 1;
     const remaining = total - pendingUpload.currentIndex;
-    progress.textContent = `📦 ${current} / ${total} 枚目 ｜ ファイル名: ${pendingUpload.fileName}`;
+    let sizeInfo = "";
+    if (pendingUpload.originalSize && pendingUpload.compressedSize) {
+      const orig = formatBytes(pendingUpload.originalSize);
+      const comp = formatBytes(pendingUpload.compressedSize);
+      const ratio = Math.round((1 - pendingUpload.compressedSize / pendingUpload.originalSize) * 100);
+      sizeInfo = `\n📐 ${orig} → ${comp} (${ratio}%圧縮)`;
+    }
+    const usage = getStorageUsage();
+    progress.textContent = `📦 ${current} / ${total} 枚目 ｜ 総使用量: ${formatBytes(usage)}${sizeInfo}`;
+    progress.style.whiteSpace = "pre-line";
     // 残り2枚以上ある時だけ「全部保存」ボタンを表示
     saveAllBtn.style.display = remaining >= 2 ? "inline-block" : "none";
     saveAllBtn.textContent = `📦 残り${remaining}枚を全部このカテゴリで保存`;
@@ -1340,32 +1428,55 @@ document.getElementById("saveAllUpload").addEventListener("click", async () => {
   const selected = document.querySelector("#categoryButtons button[data-selected='true']");
   const category = selected ? selected.dataset.category : "その他";
   const baseCaption = document.getElementById("captionInput").value.trim();
+  const saveBtn = document.getElementById("saveAllUpload");
 
   const files = pendingUpload.remainingFiles;
   const startIndex = pendingUpload.currentIndex;
   const date = pendingUpload.date;
+  const total = files.length - startIndex;
 
-  // 現在表示中の写真を保存
+  // ボタンを無効化＆進捗表示
+  saveBtn.disabled = true;
+  saveBtn.textContent = "🔄 圧縮中...";
+
+  // 現在表示中の写真を保存（既に圧縮済み）
   addUserPhoto(date, {
     url: pendingUpload.dataUrl,
     category: category,
     caption: baseCaption || pendingUpload.fileName
   });
 
-  // 残りのファイルを順次読み込んで一括保存
+  let savedCount = 1;
+  let failedCount = 0;
+
+  // 残りのファイルを順次読み込み→圧縮→保存
   for (let i = startIndex + 1; i < files.length; i++) {
-    const dataUrl = await readFileAsDataURL(files[i]);
-    addUserPhoto(date, {
-      url: dataUrl,
-      category: category,
-      caption: baseCaption ? `${baseCaption} ${i - startIndex + 1}` : files[i].name
-    });
+    try {
+      saveBtn.textContent = `🔄 圧縮中... (${i - startIndex + 1}/${total})`;
+      const rawDataUrl = await readFileAsDataURL(files[i]);
+      const compressed = await compressImage(rawDataUrl);
+      addUserPhoto(date, {
+        url: compressed,
+        category: category,
+        caption: baseCaption ? `${baseCaption} ${i - startIndex + 1}` : files[i].name
+      });
+      savedCount++;
+    } catch (err) {
+      console.error("画像処理失敗:", files[i].name, err);
+      failedCount++;
+    }
   }
 
+  saveBtn.disabled = false;
+  saveBtn.textContent = "📦 残りを全部このカテゴリで保存";
   document.getElementById("categoryPicker").classList.remove("show");
   pendingUpload = null;
   renderCalendar();
   renderDetail();
+
+  if (failedCount > 0) {
+    alert(`${savedCount}枚を保存しました。${failedCount}枚は容量制限で保存できませんでした。`);
+  }
 });
 
 /* ファイルをDataURLとして読み込む（Promise版） */
