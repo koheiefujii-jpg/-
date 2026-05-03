@@ -1064,19 +1064,33 @@
         <input type="text" id="vaultNameInput" placeholder="例：MyVault" style="width:100%; padding:8px 10px; border:1px solid #d4dffc; border-radius:6px; font-size:0.9em;">
       </div>
 
-      <!-- 出力オプション -->
-      <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:14px;">
-        <button class="obsidian-export-btn" data-action="export-current" style="text-align:left; padding:14px; border:2px solid #667eea; background:white; border-radius:10px; cursor:pointer; font-weight:600; color:#667eea; transition:all 0.2s;">
-          📄 表示中の日のMarkdownをダウンロード
-          <div style="font-size:0.78em; color:#7f8c8d; font-weight:normal; margin-top:4px;">→ ファイル名: YYYY-MM-DD.md</div>
+      <!-- 📤 エクスポート -->
+      <div style="font-size:0.75em; color:#95a5a6; font-weight:700; margin-bottom:6px; letter-spacing:1px;">📤 ダッシュボード → Obsidian</div>
+      <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:18px;">
+        <button class="obsidian-export-btn" data-action="export-current" style="text-align:left; padding:12px 14px; border:2px solid #667eea; background:white; border-radius:10px; cursor:pointer; font-weight:600; color:#667eea; transition:all 0.2s; font-size:0.9em;">
+          📄 表示中の日をMarkdownでダウンロード
         </button>
-        <button class="obsidian-export-btn" data-action="copy-current" style="text-align:left; padding:14px; border:2px solid #c8d0db; background:white; border-radius:10px; cursor:pointer; font-weight:600; color:#5a6c7d; transition:all 0.2s;">
+        <button class="obsidian-export-btn" data-action="copy-current" style="text-align:left; padding:12px 14px; border:2px solid #c8d0db; background:white; border-radius:10px; cursor:pointer; font-weight:600; color:#5a6c7d; transition:all 0.2s; font-size:0.9em;">
           📋 表示中の日をクリップボードにコピー
-          <div style="font-size:0.78em; color:#7f8c8d; font-weight:normal; margin-top:4px;">→ Obsidianに直接貼り付け可</div>
         </button>
-        <button class="obsidian-export-btn" data-action="export-all" style="text-align:left; padding:14px; border:2px solid #c8d0db; background:white; border-radius:10px; cursor:pointer; font-weight:600; color:#5a6c7d; transition:all 0.2s;">
+        <button class="obsidian-export-btn" data-action="export-all" style="text-align:left; padding:12px 14px; border:2px solid #c8d0db; background:white; border-radius:10px; cursor:pointer; font-weight:600; color:#5a6c7d; transition:all 0.2s; font-size:0.9em;">
           📦 全データを一括ダウンロード
-          <div style="font-size:0.78em; color:#7f8c8d; font-weight:normal; margin-top:4px;">→ 全エントリ＋総括ノート＋README</div>
+        </button>
+      </div>
+
+      <!-- 📥 インポート -->
+      <div style="font-size:0.75em; color:#95a5a6; font-weight:700; margin-bottom:6px; letter-spacing:1px;">📥 Obsidian → ダッシュボード</div>
+      <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:14px;">
+        <button class="obsidian-export-btn" data-action="download-template" style="text-align:left; padding:12px 14px; border:2px solid #27ae60; background:white; border-radius:10px; cursor:pointer; font-weight:600; color:#27ae60; transition:all 0.2s; font-size:0.9em;">
+          📝 入力テンプレートをダウンロード
+          <div style="font-size:0.75em; color:#7f8c8d; font-weight:normal; margin-top:2px;">Obsidianで記入用の空フォーマット</div>
+        </button>
+        <button class="obsidian-export-btn" data-action="import-markdown" style="text-align:left; padding:12px 14px; border:2px solid #27ae60; background:#f0fff4; border-radius:10px; cursor:pointer; font-weight:600; color:#27ae60; transition:all 0.2s; font-size:0.9em;">
+          📥 Markdownを貼り付けて取り込む
+          <div style="font-size:0.75em; color:#7f8c8d; font-weight:normal; margin-top:2px;">Obsidianで書いた分析を自動解析</div>
+        </button>
+        <button class="obsidian-export-btn" data-action="manage-imports" style="text-align:left; padding:12px 14px; border:1px solid #e1e8ed; background:white; border-radius:10px; cursor:pointer; font-weight:500; color:#7f8c8d; transition:all 0.2s; font-size:0.85em;">
+          🗂️ 取り込み済みデータの管理
         </button>
       </div>
 
@@ -1098,6 +1112,37 @@
     </div>
     <div class="actions">
       <button class="btn-cancel" id="closeObsidianModal">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<!-- 📥 Markdown取り込みモーダル -->
+<div class="category-picker" id="importModal">
+  <div class="category-picker-card" style="max-width:560px;">
+    <h3>📥 Markdownを取り込む</h3>
+    <div class="category-picker-scroll">
+      <p style="font-size:0.85em; color:#5a6c7d; margin-bottom:10px;">
+        Obsidianで書いた授業分析のMarkdownを貼り付けてください。テンプレート形式に従って自動解析します。
+      </p>
+      <textarea id="importTextarea" placeholder="---&#10;date: 2026-05-07&#10;class: 6年4組&#10;subject: 国語&#10;positive_count: 18&#10;---&#10;&#10;## よかったところ&#10;..." style="width:100%; min-height:300px; padding:12px; border:2px solid #e1e8ed; border-radius:8px; font-family:'Menlo','Consolas',monospace; font-size:0.85em; line-height:1.6;"></textarea>
+      <div id="importPreview" style="margin-top:10px; padding:10px; background:#f5f7ff; border-radius:6px; font-size:0.82em; color:#5a6c7d; display:none;"></div>
+    </div>
+    <div class="actions">
+      <button class="btn-cancel" id="cancelImport">キャンセル</button>
+      <button class="btn-save" id="parseImport" style="background:#27ae60;">📥 取り込む</button>
+    </div>
+  </div>
+</div>
+
+<!-- 🗂️ 取り込み済み管理モーダル -->
+<div class="category-picker" id="manageImportsModal">
+  <div class="category-picker-card" style="max-width:480px;">
+    <h3>🗂️ 取り込み済みデータの管理</h3>
+    <div class="category-picker-scroll">
+      <div id="manageImportsList"></div>
+    </div>
+    <div class="actions">
+      <button class="btn-cancel" id="closeManageImports">閉じる</button>
     </div>
   </div>
 </div>
@@ -4161,6 +4206,270 @@ async function copyToClipboard(text) {
   }
 }
 
+/* ============================================================
+   📥 ユーザー入力データの管理（Obsidianから取り込み）
+   ============================================================ */
+const USER_ENTRIES_KEY = "user_analysis_entries_v1";
+
+function loadUserEntries() {
+  try {
+    return JSON.parse(localStorage.getItem(USER_ENTRIES_KEY) || "[]");
+  } catch {
+    return [];
+  }
+}
+function saveUserEntries(entries) {
+  localStorage.setItem(USER_ENTRIES_KEY, JSON.stringify(entries));
+}
+function addUserEntry(data) {
+  const entries = loadUserEntries();
+  const idx = entries.findIndex(e => e.date === data.date);
+  if (idx >= 0) {
+    entries[idx] = { ...entries[idx], ...data, _userEntry: true };
+  } else {
+    entries.push({ ...data, _userEntry: true });
+  }
+  saveUserEntries(entries);
+}
+function deleteUserEntry(date) {
+  const entries = loadUserEntries().filter(e => e.date !== date);
+  saveUserEntries(entries);
+}
+
+/* 既存の getDataByDate / getDataInRange をラップして
+   組み込みデータとユーザー入力データを統合 */
+const _origGetDataByDate = getDataByDate;
+const _origGetDataInRange = getDataInRange;
+
+getDataByDate = function(dateStr) {
+  const userEntries = loadUserEntries();
+  const userMatch = userEntries.find(e => e.date === dateStr);
+  const builtin = _origGetDataByDate(dateStr);
+  // ユーザーデータが優先（同じ日付なら上書き）
+  if (userMatch && builtin) return { ...builtin, ...userMatch, _userEntry: true };
+  return userMatch || builtin;
+};
+
+getDataInRange = function(startDate, endDate) {
+  const builtin = _origGetDataInRange(startDate, endDate);
+  const userEntries = loadUserEntries();
+  const userInRange = userEntries.filter(e => {
+    const date = new Date(e.date);
+    return date >= startDate && date <= endDate;
+  });
+  // 重複排除（ユーザー優先）
+  const merged = [...builtin];
+  userInRange.forEach(u => {
+    const idx = merged.findIndex(b => b.date === u.date);
+    if (idx >= 0) merged[idx] = { ...merged[idx], ...u, _userEntry: true };
+    else merged.push(u);
+  });
+  return merged.sort((a, b) => new Date(a.date) - new Date(b.date));
+};
+
+/* ============================================================
+   Markdown 解析（YAMLフロントマター + セクション）
+   ============================================================ */
+function parseMarkdown(md) {
+  // フロントマター抽出
+  const fmMatch = md.match(/^---\s*\n([\s\S]*?)\n---\s*\n([\s\S]*)$/);
+  if (!fmMatch) {
+    throw new Error("YAMLフロントマター（--- で挟まれた部分）が見つかりません");
+  }
+  const fm = parseSimpleYaml(fmMatch[1]);
+  const body = fmMatch[2];
+
+  if (!fm.date) {
+    throw new Error("date フィールドが必須です（例：date: 2026-05-07）");
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fm.date)) {
+    throw new Error("date は YYYY-MM-DD 形式で指定してください");
+  }
+
+  // セクション分割（## で始まる）
+  const sections = {};
+  const lines = body.split("\n");
+  let currentTitle = null;
+  let buffer = [];
+  let inDetail = false;
+  let detailBuffer = [];
+
+  function flushSection() {
+    if (currentTitle) {
+      sections[currentTitle] = {
+        short: buffer.join("\n").trim(),
+        detail: detailBuffer.length > 0 ? detailBuffer.join("\n").trim() : ""
+      };
+    }
+  }
+
+  lines.forEach(line => {
+    const h2 = line.match(/^##\s+(.+?)\s*$/);
+    const h3 = line.match(/^###\s+(.+?)\s*$/);
+    if (h2) {
+      flushSection();
+      currentTitle = h2[1].trim();
+      buffer = [];
+      detailBuffer = [];
+      inDetail = false;
+    } else if (h3 && /詳細|詳しく/.test(h3[1])) {
+      inDetail = true;
+    } else if (currentTitle) {
+      if (inDetail) detailBuffer.push(line);
+      else buffer.push(line);
+    }
+  });
+  flushSection();
+
+  // セクション名 → フィールド名のマッピング
+  const sectionMap = {
+    "よかったところ": "good",
+    "改善点": "improve",
+    "成長の記録": "growth",
+    "自立した学習者との関連": "independence",
+    "次回への課題": "next",
+    "動機（やりたさ）の状態": "motivation",
+    "動機の状態": "motivation",
+    "やりたさ": "motivation",
+    "自己調整の実態": "self_regulation",
+    "自己調整": "self_regulation",
+    "動機→自己調整の移行": "transition",
+    "移行": "transition",
+    "教師の関わりの影響": "teacher_intervention",
+    "教師の関わり": "teacher_intervention",
+    "仮説": "hypothesis"
+  };
+
+  const data = {
+    date: fm.date,
+    class: fm.class || "",
+    subject: fm.subject || "",
+    positive_count: parseInt(fm.positive_count) || 0,
+    photos: []
+  };
+
+  // 絵文字や記号を除去してマッチ
+  Object.entries(sections).forEach(([title, content]) => {
+    const cleaned = title.replace(/[^぀-ゟ゠-ヿ一-龯a-zA-Z（）()→\s]/g, "").trim();
+    let matchedField = null;
+    Object.entries(sectionMap).forEach(([key, field]) => {
+      if (cleaned.includes(key)) matchedField = field;
+    });
+    if (matchedField) {
+      data[matchedField] = content.short;
+      if (content.detail) data[matchedField + "_detail"] = content.detail;
+    }
+  });
+
+  return data;
+}
+
+/* シンプルなYAML解析（key: value のみ） */
+function parseSimpleYaml(yamlText) {
+  const result = {};
+  const lines = yamlText.split("\n");
+  let currentKey = null;
+  lines.forEach(line => {
+    if (line.match(/^\s*-\s+/)) {
+      // リストアイテム（タグなど）
+      if (currentKey) {
+        if (!Array.isArray(result[currentKey])) result[currentKey] = [];
+        result[currentKey].push(line.replace(/^\s*-\s+/, "").trim());
+      }
+    } else {
+      const m = line.match(/^([a-zA-Z_]+)\s*:\s*(.*)$/);
+      if (m) {
+        const key = m[1];
+        const val = m[2].trim();
+        if (val === "") {
+          currentKey = key;
+          result[key] = [];
+        } else {
+          currentKey = null;
+          result[key] = val.replace(/^["']|["']$/g, "");
+        }
+      }
+    }
+  });
+  return result;
+}
+
+/* テンプレート生成 */
+function generateImportTemplate() {
+  const today = new Date().toISOString().split("T")[0];
+  return `---
+date: ${today}
+class: 6年4組
+subject: 国語・算数
+positive_count: 0
+tags:
+  - 授業分析
+---
+
+# ${today} 授業分析
+
+## よかったところ
+（短いサマリ：1〜2文）
+
+### 詳細
+（より詳しい分析、教師の発話の引用など）
+**強調したい部分**
+> 引用したい発話
+*ハイライトしたい言葉*
+
+## 改善点
+（短いサマリ）
+
+### 詳細
+（理由付きの改善案）
+
+## 成長の記録
+（教師と子どもの成長）
+
+### 詳細
+
+
+## 自立した学習者との関連
+（主体性／自己調整／協働の3軸）
+
+### 詳細
+
+
+## 次回への課題
+（具体的なアクション）
+
+### 詳細
+
+
+## 動機（やりたさ）の状態
+（🟢/🟡/🔴 + 場面）
+
+### 詳細
+
+
+## 自己調整の実態
+（4タイプ別の観察：やりたくないが取り組む／試行錯誤／目標調整／感情を乗り越える）
+
+### 詳細
+
+
+## 動機→自己調整の移行
+（移行のきっかけ）
+
+### 詳細
+
+
+## 教師の関わりの影響
+（4類型：問いかけ／待つ／評価／環境設計）
+
+### 詳細
+
+
+## 仮説
+（この日から得られる仮説）
+`;
+}
+
 /* === Obsidian連携モーダルのイベント === */
 document.getElementById("obsidianBtn").addEventListener("click", () => {
   document.getElementById("obsidianModal").classList.add("show");
@@ -4197,25 +4506,105 @@ document.querySelectorAll(".obsidian-export-btn").forEach(btn => {
         alert(ok ? "✅ クリップボードにコピーしました。Obsidianに貼り付けてください。" : "コピーに失敗しました。");
       }
     } else if (action === "export-all") {
-      // 全エントリを順次ダウンロード
-      const total = ANALYSIS_DATA.length;
+      // 全エントリを順次ダウンロード（ユーザー追加分も含む）
+      const allData = getDataInRange(new Date(2000, 0, 1), new Date(2099, 11, 31));
+      const total = allData.length;
       if (!confirm(`全 ${total} エントリ + インデックスを順次ダウンロードします。よろしいですか？`)) return;
 
-      // インデックス
       downloadFile("_index.md", generateIndexMarkdown());
-
-      // 各エントリ
-      ANALYSIS_DATA.forEach((d, i) => {
+      allData.forEach((d, i) => {
         setTimeout(() => {
           downloadFile(`${d.date}.md`, generateDayMarkdown(d));
         }, (i + 1) * 250);
       });
-
       setTimeout(() => {
-        alert(`✅ ${total + 1} ファイルのダウンロードを開始しました。\n\nObsidian Vault内の任意のフォルダに保存してください。`);
+        alert(`✅ ${total + 1} ファイルのダウンロードを開始しました。`);
       }, (total + 1) * 250 + 100);
+    } else if (action === "download-template") {
+      downloadFile("授業分析テンプレート.md", generateImportTemplate());
+      alert("✅ テンプレートをダウンロードしました。\nObsidianで開いて記入してください。");
+    } else if (action === "import-markdown") {
+      document.getElementById("obsidianModal").classList.remove("show");
+      document.getElementById("importModal").classList.add("show");
+      document.getElementById("importTextarea").value = "";
+      document.getElementById("importPreview").style.display = "none";
+    } else if (action === "manage-imports") {
+      document.getElementById("obsidianModal").classList.remove("show");
+      showManageImports();
     }
   });
+});
+
+/* === 取り込み処理 === */
+document.getElementById("cancelImport").addEventListener("click", () => {
+  document.getElementById("importModal").classList.remove("show");
+});
+
+document.getElementById("parseImport").addEventListener("click", () => {
+  const text = document.getElementById("importTextarea").value.trim();
+  if (!text) {
+    alert("Markdownを貼り付けてください。");
+    return;
+  }
+  try {
+    const data = parseMarkdown(text);
+    // プレビュー表示
+    const preview = document.getElementById("importPreview");
+    preview.style.display = "block";
+    const fields = Object.keys(data).filter(k => data[k] && k !== "photos" && k !== "_userEntry");
+    preview.innerHTML = `
+      <strong>✅ 解析成功</strong><br>
+      日付: <strong>${data.date}</strong> ／ クラス: ${data.class || "（未指定）"} ／ 教科: ${data.subject || "（未指定）"}<br>
+      検出されたフィールド: ${fields.length}個（${fields.join(", ")}）
+    `;
+    if (!confirm(`${data.date} のデータとして取り込みます。\n\n同じ日付のユーザー入力データがあれば上書きされます。\nよろしいですか？`)) return;
+    addUserEntry(data);
+    document.getElementById("importModal").classList.remove("show");
+    selectedDate = data.date;
+    const d = new Date(data.date);
+    currentDate = new Date(d.getFullYear(), d.getMonth(), 1);
+    renderCalendar();
+    renderDetail();
+    setTimeout(() => alert("✅ 取り込み完了！カレンダーで該当日が選択されました。"), 100);
+  } catch (e) {
+    alert("⚠️ 解析エラー：" + e.message);
+  }
+});
+
+/* === 管理ダイアログ === */
+function showManageImports() {
+  const entries = loadUserEntries();
+  const modal = document.getElementById("manageImportsModal");
+  const list = document.getElementById("manageImportsList");
+  if (entries.length === 0) {
+    list.innerHTML = `<div style="text-align:center; color:#95a5a6; padding:30px;">取り込んだデータはまだありません。</div>`;
+  } else {
+    const sorted = [...entries].sort((a, b) => new Date(b.date) - new Date(a.date));
+    list.innerHTML = sorted.map(e => `
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 12px; border:1px solid #e1e8ed; border-radius:8px; margin-bottom:6px;">
+        <div>
+          <div style="font-weight:700; color:#2c3e50;">${formatDateJP(e.date)}</div>
+          <div style="font-size:0.8em; color:#7f8c8d;">${e.subject || "（教科未指定）"}</div>
+        </div>
+        <button data-delete-date="${e.date}" style="padding:6px 12px; background:#e74c3c; color:white; border:none; border-radius:6px; cursor:pointer; font-size:0.85em;">削除</button>
+      </div>
+    `).join("");
+    list.querySelectorAll("[data-delete-date]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const date = btn.dataset.deleteDate;
+        if (confirm(`${date} のデータを削除しますか？`)) {
+          deleteUserEntry(date);
+          showManageImports();
+          renderCalendar();
+          renderDetail();
+        }
+      });
+    });
+  }
+  modal.classList.add("show");
+}
+document.getElementById("closeManageImports").addEventListener("click", () => {
+  document.getElementById("manageImportsModal").classList.remove("show");
 });
 
 // 初期描画（IndexedDB の準備を待ってから）
