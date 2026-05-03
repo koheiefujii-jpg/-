@@ -369,6 +369,26 @@
   .photo-thumb:hover .photo-delete-btn { display: flex; }
 
   /* ドロップゾーン */
+  /* 「もっと見る」トグルボタン */
+  .photo-toggle-btn {
+    width: 100%;
+    padding: 10px;
+    margin-top: 10px;
+    background: white;
+    border: 1px dashed #c8d0db;
+    border-radius: 8px;
+    cursor: pointer;
+    color: #5a6c7d;
+    font-size: 0.85em;
+    font-weight: 600;
+    transition: all 0.2s;
+  }
+  .photo-toggle-btn:hover {
+    border-color: #667eea;
+    background: #f0f3f7;
+    color: #667eea;
+  }
+
   .photo-dropzone {
     border: 2px dashed #c8d0db;
     border-radius: 10px;
@@ -1004,6 +1024,8 @@ let currentDate = new Date(2026, 3, 1);
 let selectedDate = null;
 let currentPeriod = "day";
 let activeCategory = "すべて";
+let photosExpanded = false;     // 写真ギャラリーの展開状態
+const PHOTOS_INITIAL_LIMIT = 6; // 初期表示枚数
 let pendingUpload = null; // {date, dataUrl, fileName}
 
 /* ============================================================
@@ -1223,6 +1245,7 @@ function renderCalendar() {
     cell.addEventListener("click", () => {
       selectedDate = dateStr;
       activeCategory = "すべて";
+      photosExpanded = false;
       renderCalendar();
       renderDetail();
     });
@@ -1339,8 +1362,14 @@ function renderPhotoSection(dateStr, photos) {
     ? photos
     : photos.filter(p => p.category === activeCategory);
 
+  // 表示枚数の制限（PHOTOS_INITIAL_LIMIT 枚まで、または展開時は全部）
+  const total = filteredPhotos.length;
+  const showAll = photosExpanded || total <= PHOTOS_INITIAL_LIMIT;
+  const visiblePhotos = showAll ? filteredPhotos : filteredPhotos.slice(0, PHOTOS_INITIAL_LIMIT);
+  const hiddenCount = total - visiblePhotos.length;
+
   // サムネイルグリッド
-  const thumbs = filteredPhotos.map(photo => `
+  const thumbs = visiblePhotos.map(photo => `
     <div class="photo-thumb" data-url="${photo.url}" data-caption="${escapeHtml(photo.caption || '')}">
       <span class="photo-category-label">${photo.category}</span>
       ${photo.isUserPhoto ? `<button class="photo-delete-btn" data-photo-id="${photo.id}" title="削除">×</button>` : ""}
@@ -1349,13 +1378,25 @@ function renderPhotoSection(dateStr, photos) {
     </div>
   `).join("");
 
+  // 展開/折りたたみボタン
+  let toggleBtn = "";
+  if (total > PHOTOS_INITIAL_LIMIT) {
+    toggleBtn = photosExpanded
+      ? `<button class="photo-toggle-btn" id="photoToggleBtn">▲ 折りたたむ</button>`
+      : `<button class="photo-toggle-btn" id="photoToggleBtn">▼ もっと見る（残り${hiddenCount}枚）</button>`;
+  }
+
+  // 写真の総数表示
+  const countLabel = total > 0 ? `<span style="font-size:0.85em; color:#7f8c8d; font-weight:normal;">（${total}枚）</span>` : "";
+
   return `
     <div class="photo-section">
       <div class="photo-section-header">
-        <div class="section-title" style="margin-bottom:0;">📷 写真ギャラリー</div>
+        <div class="section-title" style="margin-bottom:0;">📷 写真ギャラリー${countLabel}</div>
       </div>
       ${photos.length > 0 ? `<div class="photo-category-tabs">${categoryTabs}</div>` : ""}
       ${filteredPhotos.length > 0 ? `<div class="photo-grid">${thumbs}</div>` : ""}
+      ${toggleBtn}
       <div class="photo-dropzone" id="photoDropzone">
         <input type="file" id="photoFileInput" accept="image/*" multiple>
         <div class="icon">📤</div>
@@ -1382,9 +1423,19 @@ function bindPhotoEvents() {
   document.querySelectorAll(".category-tab").forEach(tab => {
     tab.addEventListener("click", () => {
       activeCategory = tab.dataset.category;
+      photosExpanded = false;  // カテゴリ切替時に折りたたみ状態に戻す
       renderDetail();
     });
   });
+
+  // 「もっと見る/折りたたむ」ボタン
+  const toggleBtn = document.getElementById("photoToggleBtn");
+  if (toggleBtn) {
+    toggleBtn.addEventListener("click", () => {
+      photosExpanded = !photosExpanded;
+      renderDetail();
+    });
+  }
 
   // サムネイルクリック→ライトボックス
   document.querySelectorAll(".photo-thumb").forEach(thumb => {
