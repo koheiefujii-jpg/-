@@ -168,6 +168,30 @@
     color: white !important;
     box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
   }
+  /* 今日の日付：オレンジの太枠＋下線 */
+  .day-cell.today {
+    box-shadow: inset 0 0 0 2px #f39c12;
+    font-weight: 800;
+  }
+  .day-cell.today::before {
+    content: "今日";
+    position: absolute;
+    top: -2px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-100%);
+    background: #f39c12;
+    color: white;
+    font-size: 0.55em;
+    padding: 1px 6px;
+    border-radius: 4px;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  /* 今日かつ選択中：オレンジ枠を残しつつ選択色に */
+  .day-cell.today.selected {
+    box-shadow: inset 0 0 0 2px #f39c12, 0 4px 12px rgba(102, 126, 234, 0.4);
+  }
   .day-cell.has-data::after {
     content: "";
     position: absolute;
@@ -1008,6 +1032,10 @@
         <div class="legend-item">
           <span>📷</span>
           <span>写真あり</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-box" style="background: white; border:2px solid #f39c12;"></div>
+          <span>今日</span>
         </div>
         <div class="legend-item">
           <div class="legend-box" style="background: #667eea;"></div>
@@ -2656,6 +2684,9 @@ function renderCalendar() {
   const month = currentDate.getMonth();
   document.getElementById("monthLabel").textContent = `${year}年 ${month + 1}月`;
 
+  // 今日の日付（YYYY-MM-DD）
+  const todayStr = formatDate(new Date());
+
   const grid = document.getElementById("calendarGrid");
   while (grid.children.length > 7) grid.removeChild(grid.lastChild);
 
@@ -2677,6 +2708,7 @@ function renderCalendar() {
     const cell = document.createElement("div");
     cell.className = "day-cell " + (hasData ? "has-data" : "no-data");
     if (hasPhoto) cell.classList.add("has-photo");
+    if (dateStr === todayStr) cell.classList.add("today");
     cell.textContent = d;
     cell.dataset.date = dateStr;
 
