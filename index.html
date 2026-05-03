@@ -934,14 +934,9 @@ function getDataUrlSize(dataUrl) {
   return Math.round(base64.length * 0.75);
 }
 
-/* localStorage の使用量を計算（バイト） */
+/* ストレージ使用量（IndexedDBのキャッシュ値を返す） */
 function getStorageUsage() {
-  try {
-    const raw = localStorage.getItem(PHOTO_STORAGE_KEY) || "";
-    return raw.length * 2; // UTF-16なので×2
-  } catch (e) {
-    return 0;
-  }
+  return cachedStorageUsage;
 }
 
 /* バイトを人間が読みやすい形に */
@@ -961,63 +956,158 @@ let activeCategory = "すべて";
 let pendingUpload = null; // {date, dataUrl, fileName}
 
 /* ============================================================
-   📌 写真ストレージ操作
+   📌 写真ストレージ操作（IndexedDB版・大容量対応）
+   - localStorage（5MB制限）から IndexedDB（数十MB〜無制限）に移行
+   - メモリキャッシュで同期アクセスを維持
+   - 既存のlocalStorageデータは初回起動時に自動移行
    ============================================================ */
-function loadUserPhotos() {
+const DB_NAME = "classroom_dashboard";
+const DB_VERSION = 1;
+const STORE_NAME = "photos";
+
+let _db = null;
+let photoCacheByDate = {};       // 同期アクセス用メモリキャッシュ
+let cachedStorageUsage = 0;      // ストレージ使用量のキャッシュ
+
+/* IndexedDB を開く */
+function openDB() {
+  return new Promise((resolve, reject) => {
+    if (_db) return resolve(_db);
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = (e) => {
+      const database = e.target.result;
+      if (!database.objectStoreNames.contains(STORE_NAME)) {
+        const store = database.createObjectStore(STORE_NAME, { keyPath: "id", autoIncrement: true });
+        store.createIndex("date", "date", { unique: false });
+      }
+    };
+    req.onsuccess = (e) => { _db = e.target.result; resolve(_db); };
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+/* 全写真を取得 */
+async function dbGetAllPhotos() {
+  const database = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = database.transaction(STORE_NAME, "readonly");
+    const req = tx.objectStore(STORE_NAME).getAll();
+    req.onsuccess = () => resolve(req.result || []);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+/* 写真を追加 */
+async function dbAddPhoto(photo) {
+  const database = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = database.transaction(STORE_NAME, "readwrite");
+    const req = tx.objectStore(STORE_NAME).add(photo);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+/* 写真を削除 */
+async function dbDeletePhoto(id) {
+  const database = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = database.transaction(STORE_NAME, "readwrite");
+    const req = tx.objectStore(STORE_NAME).delete(id);
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+  });
+}
+
+/* メモリキャッシュを再構築 */
+async function refreshPhotoCache() {
   try {
-    const raw = localStorage.getItem(PHOTO_STORAGE_KEY);
-    return raw ? JSON.parse(raw) : {};
+    const all = await dbGetAllPhotos();
+    photoCacheByDate = {};
+    let totalSize = 0;
+    for (const p of all) {
+      if (!photoCacheByDate[p.date]) photoCacheByDate[p.date] = [];
+      photoCacheByDate[p.date].push(p);
+      totalSize += getDataUrlSize(p.url || "");
+    }
+    cachedStorageUsage = totalSize;
   } catch (e) {
-    console.error("写真の読み込みに失敗", e);
-    return {};
+    console.error("キャッシュ更新失敗:", e);
   }
 }
 
-function saveUserPhotos(photos) {
+/* localStorage から IndexedDB へ自動移行（初回のみ） */
+async function migrateFromLocalStorage() {
+  const raw = localStorage.getItem(PHOTO_STORAGE_KEY);
+  if (!raw) return 0;
   try {
-    localStorage.setItem(PHOTO_STORAGE_KEY, JSON.stringify(photos));
+    const data = JSON.parse(raw);
+    let migrated = 0;
+    for (const date in data) {
+      for (const photo of data[date]) {
+        try {
+          const { id, ...rest } = photo;
+          await dbAddPhoto({ ...rest, date, isUserPhoto: true });
+          migrated++;
+        } catch (e) {
+          console.warn("移行失敗:", e);
+        }
+      }
+    }
+    if (migrated > 0) {
+      localStorage.removeItem(PHOTO_STORAGE_KEY);
+      console.log(`📦 ${migrated}枚の写真をIndexedDBに移行しました`);
+    }
+    return migrated;
+  } catch (e) {
+    console.error("移行エラー:", e);
+    return 0;
+  }
+}
+
+/* === 公開API（既存のコードから呼ばれる関数） === */
+
+function getPhotosForDate(dateStr) {
+  const data = getDataByDate(dateStr);
+  const builtIn = (data && data.photos) ? data.photos : [];
+  const userPhotos = photoCacheByDate[dateStr] || [];
+  return [...builtIn, ...userPhotos];
+}
+
+async function addUserPhoto(dateStr, photo) {
+  try {
+    const newPhoto = {
+      ...photo,
+      date: dateStr,
+      isUserPhoto: true,
+      timestamp: Date.now()
+    };
+    const id = await dbAddPhoto(newPhoto);
+    newPhoto.id = id;
+    if (!photoCacheByDate[dateStr]) photoCacheByDate[dateStr] = [];
+    photoCacheByDate[dateStr].push(newPhoto);
+    cachedStorageUsage += getDataUrlSize(newPhoto.url || "");
     return true;
   } catch (e) {
-    const usage = getStorageUsage();
     alert(
-      "写真の保存に失敗しました（容量制限）。\n\n" +
-      `現在の使用量：約 ${formatBytes(usage)}\n` +
-      `ブラウザの上限：通常 5〜10MB\n\n` +
-      "対処法：\n" +
-      "① 古い写真を削除する（サムネイルにマウスを乗せて × ボタン）\n" +
-      "② 不要な日のデータを整理する\n" +
-      "③ 使用量が多すぎる場合は、画像をさらに圧縮する設定変更が必要です"
+      "写真の保存に失敗しました。\n\n" +
+      `現在の使用量：約 ${formatBytes(cachedStorageUsage)}\n\n` +
+      "エラー：" + (e.message || e)
     );
     return false;
   }
 }
 
-function getPhotosForDate(dateStr) {
-  // ANALYSIS_DATA に最初から入っている写真
-  const data = getDataByDate(dateStr);
-  const builtIn = (data && data.photos) ? data.photos : [];
-  // ユーザーが追加した写真（localStorage）
-  const userPhotos = loadUserPhotos();
-  const userForDate = userPhotos[dateStr] || [];
-  return [...builtIn, ...userForDate];
-}
-
-function addUserPhoto(dateStr, photo) {
-  const photos = loadUserPhotos();
-  if (!photos[dateStr]) photos[dateStr] = [];
-  photos[dateStr].push({
-    ...photo,
-    id: Date.now() + Math.random(),
-    isUserPhoto: true
-  });
-  saveUserPhotos(photos);
-}
-
-function deleteUserPhoto(dateStr, photoId) {
-  const photos = loadUserPhotos();
-  if (photos[dateStr]) {
-    photos[dateStr] = photos[dateStr].filter(p => p.id !== photoId);
-    saveUserPhotos(photos);
+async function deleteUserPhoto(dateStr, photoId) {
+  try {
+    await dbDeletePhoto(photoId);
+    if (photoCacheByDate[dateStr]) {
+      const removed = photoCacheByDate[dateStr].find(p => p.id === photoId);
+      if (removed) cachedStorageUsage -= getDataUrlSize(removed.url || "");
+      photoCacheByDate[dateStr] = photoCacheByDate[dateStr].filter(p => p.id !== photoId);
+    }
+  } catch (e) {
+    alert("削除に失敗しました: " + (e.message || e));
   }
 }
 
@@ -1249,10 +1339,10 @@ function bindPhotoEvents() {
 
   // 削除ボタン
   document.querySelectorAll(".photo-delete-btn").forEach(btn => {
-    btn.addEventListener("click", (e) => {
+    btn.addEventListener("click", async (e) => {
       e.stopPropagation();
       if (confirm("この写真を削除しますか？")) {
-        deleteUserPhoto(selectedDate, parseFloat(btn.dataset.photoId));
+        await deleteUserPhoto(selectedDate, parseFloat(btn.dataset.photoId));
         renderCalendar();
         renderDetail();
       }
@@ -1396,13 +1486,13 @@ document.getElementById("cancelUpload").addEventListener("click", () => {
 });
 
 /* 1枚だけ保存（個別カテゴリ） */
-document.getElementById("confirmUpload").addEventListener("click", () => {
+document.getElementById("confirmUpload").addEventListener("click", async () => {
   if (!pendingUpload) return;
   const selected = document.querySelector("#categoryButtons button[data-selected='true']");
   const category = selected ? selected.dataset.category : "その他";
   const caption = document.getElementById("captionInput").value.trim();
 
-  addUserPhoto(pendingUpload.date, {
+  await addUserPhoto(pendingUpload.date, {
     url: pendingUpload.dataUrl,
     category: category,
     caption: caption || pendingUpload.fileName
@@ -1440,7 +1530,7 @@ document.getElementById("saveAllUpload").addEventListener("click", async () => {
   saveBtn.textContent = "🔄 圧縮中...";
 
   // 現在表示中の写真を保存（既に圧縮済み）
-  addUserPhoto(date, {
+  await addUserPhoto(date, {
     url: pendingUpload.dataUrl,
     category: category,
     caption: baseCaption || pendingUpload.fileName
@@ -1455,12 +1545,12 @@ document.getElementById("saveAllUpload").addEventListener("click", async () => {
       saveBtn.textContent = `🔄 圧縮中... (${i - startIndex + 1}/${total})`;
       const rawDataUrl = await readFileAsDataURL(files[i]);
       const compressed = await compressImage(rawDataUrl);
-      addUserPhoto(date, {
+      const ok = await addUserPhoto(date, {
         url: compressed,
         category: category,
         caption: baseCaption ? `${baseCaption} ${i - startIndex + 1}` : files[i].name
       });
-      savedCount++;
+      if (ok) savedCount++; else failedCount++;
     } catch (err) {
       console.error("画像処理失敗:", files[i].name, err);
       failedCount++;
@@ -1651,16 +1741,26 @@ document.querySelectorAll(".period-btn").forEach(btn => {
   });
 });
 
-// 初期描画
-renderCalendar();
-if (ANALYSIS_DATA.length > 0) {
-  const latest = ANALYSIS_DATA[ANALYSIS_DATA.length - 1];
-  selectedDate = latest.date;
-  const latestDate = new Date(latest.date);
-  currentDate = new Date(latestDate.getFullYear(), latestDate.getMonth(), 1);
+// 初期描画（IndexedDB の準備を待ってから）
+(async function init() {
+  try {
+    await openDB();
+    await migrateFromLocalStorage();
+    await refreshPhotoCache();
+  } catch (e) {
+    console.error("ストレージ初期化失敗:", e);
+  }
+
   renderCalendar();
-  renderDetail();
-}
+  if (ANALYSIS_DATA.length > 0) {
+    const latest = ANALYSIS_DATA[ANALYSIS_DATA.length - 1];
+    selectedDate = latest.date;
+    const latestDate = new Date(latest.date);
+    currentDate = new Date(latestDate.getFullYear(), latestDate.getMonth(), 1);
+    renderCalendar();
+    renderDetail();
+  }
+})();
 </script>
 </body>
 </html>
