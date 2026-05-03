@@ -2057,12 +2057,31 @@ document.getElementById("lightboxClose").addEventListener("click", () => {
 });
 
 /* ===== 期間まとめ表示 ===== */
-/* 期間まとめ表示（週/月/半年/年）*/
+/* ============================================================
+   期間まとめ表示：「自立した学習者」育成の視点で分析
+   ============================================================ */
+
+/* 自立した学習者の3軸キーワード */
+const AUTONOMY_AXES = {
+  "主体性": ["主体性", "主体", "自分から", "自走", "自発", "提案", "選択", "決定", "自分で考え"],
+  "自己調整": ["自己調整", "けテぶれ", "大分析", "振り返り", "計画", "メタ認知", "心マトリクス", "プラス点", "＋れ", "見直し", "セルフ"],
+  "協働": ["協働", "太陽", "友達に聞く", "声かけ合", "ペア", "助け合い", "信じて思いやる", "話しやすい"]
+};
+
+/* 指導の傾向テーマ（improve/next から検出） */
+const PEDAGOGY_THEMES = {
+  "教師の発話量管理": ["話しすぎ", "発話量", "語り", "教えすぎ", "発話を", "短く"],
+  "個別フォロー": ["個別", "一人一人", "声かけ", "ヒアリング", "個別ケア", "個別声かけ"],
+  "体験・実技化": ["体験", "やってみる", "実技", "ペア活動"],
+  "可視化・掲示物": ["掲示", "見本", "ビジュアル", "ポスター", "可視化"],
+  "ルール化・仕組み化": ["ルール化", "プロトコル", "仕組み", "ルーティン", "テンプレ"],
+  "学年・校内への波及": ["学年", "他の先生", "校内", "展開", "学年主任"],
+  "教師の自己ケア": ["休養", "消耗", "持続可能", "回復", "セルフケア"]
+};
+
 function renderRangeDetail(card, range, label) {
   const items = getDataInRange(range.start, range.end);
   const totalPositive = items.reduce((sum, d) => sum + (d.positive_count || 0), 0);
-  const subjects = [...new Set(items.flatMap(d => d.subject.split(/[・、]/)))].filter(Boolean);
-  const totalPhotos = items.reduce((sum, d) => sum + getPhotosForDate(d.date).length, 0);
   const avgFB = items.length > 0 ? Math.round(totalPositive / items.length) : 0;
 
   const header = `
@@ -2071,6 +2090,9 @@ function renderRangeDetail(card, range, label) {
         <div class="detail-date">${label}まとめ</div>
         <p style="color:#7f8c8d; font-size:0.9em; margin-top:4px;">
           ${formatDateJP(formatDate(range.start))} 〜 ${formatDateJP(formatDate(range.end))}
+        </p>
+        <p style="color:#667eea; font-size:0.82em; margin-top:6px; font-weight:600;">
+          🌱 視点：「自立した学習者」の育成に向けた指導になっているか
         </p>
       </div>
     </div>`;
@@ -2085,7 +2107,9 @@ function renderRangeDetail(card, range, label) {
     return;
   }
 
-  // ① サマリ統計
+  // ① サマリ統計（自立育成にフォーカス）
+  const autonomyMentions = countAutonomyMentions(items);
+  const totalAutonomy = autonomyMentions.total;
   const summary = `
     <div class="summary-grid">
       <div class="stat-card">
@@ -2101,37 +2125,36 @@ function renderRangeDetail(card, range, label) {
         <div class="stat-value">${avgFB}回</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">扱った教科数</div>
-        <div class="stat-value">${subjects.length}</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">写真合計</div>
-        <div class="stat-value">${totalPhotos}枚</div>
+        <div class="stat-label">自立場面の言及</div>
+        <div class="stat-value">${totalAutonomy}件</div>
       </div>
     </div>`;
 
-  // ② ナラティブサマリ（自動生成）
-  const narrativeBlock = renderNarrativeSummary(items, label, totalPositive, avgFB, subjects);
+  // ② ナラティブサマリ（自立育成の文脈）
+  const narrativeBlock = renderNarrativeSummary(items, label, totalPositive, avgFB, autonomyMentions);
 
-  // ③ ハイライト
-  const highlightsBlock = renderHighlights(items, totalPositive, avgFB);
+  // ③ 自立3軸のバランス
+  const autonomyChartBlock = renderAutonomyChart(autonomyMentions);
 
-  // ④ 肯定発言の推移チャート
+  // ④ 自立育成のハイライト
+  const highlightsBlock = renderAutonomyHighlights(items);
+
+  // ⑤ 肯定発言の推移
   const fbChartBlock = renderFBChart(items);
 
-  // ⑤ 教科別の登場回数チャート
-  const subjectChartBlock = renderSubjectChart(items);
+  // ⑥ 指導の傾向分析（improve/next から検出）
+  const pedagogyBlock = renderPedagogyAnalysis(items);
 
-  // ⑥ キーフレーズの登場
+  // ⑦ 自立を支えたキーフレーズ
   const keywordBlock = renderKeywordSection(items);
 
-  // ⑦ 期間特性に応じた追加ブロック（半年/年）
+  // ⑧ 改善サイクル分析（半年/年のみ）
   let trendBlock = "";
   if (currentPeriod === "half" || currentPeriod === "year") {
     trendBlock = renderLongTermTrend(items, label);
   }
 
-  // ⑧ エントリ一覧
+  // ⑨ エントリ一覧（既存）
   const entries = items.map(d => {
     const photos = getPhotosForDate(d.date);
     const photoStrip = photos.length > 0
@@ -2142,7 +2165,7 @@ function renderRangeDetail(card, range, label) {
       : "";
     return `
       <div class="entry-item">
-        <div class="entry-date">${formatDateJP(d.date)} ｜ ${d.subject}${photos.length > 0 ? ` 📷${photos.length}` : ""} ｜ ⭐${d.positive_count || 0}</div>
+        <div class="entry-date">${formatDateJP(d.date)} ｜ ⭐${d.positive_count || 0}回</div>
         <div class="entry-summary">${d.good.length > 100 ? d.good.substring(0, 100) + "..." : d.good}</div>
         ${photoStrip}
       </div>`;
@@ -2154,52 +2177,212 @@ function renderRangeDetail(card, range, label) {
       <div class="entry-list" style="margin-top:8px;">${entries}</div>
     </div>`;
 
-  card.innerHTML = header + summary + narrativeBlock + highlightsBlock
-    + fbChartBlock + subjectChartBlock + keywordBlock + trendBlock + entryListBlock;
+  card.innerHTML = header + summary + narrativeBlock + autonomyChartBlock
+    + highlightsBlock + fbChartBlock + pedagogyBlock + keywordBlock + trendBlock + entryListBlock;
 }
 
-/* === 自動生成のナラティブサマリ === */
-function renderNarrativeSummary(items, label, totalPositive, avgFB, subjects) {
+/* === 自立3軸の言及をカウント === */
+function countAutonomyMentions(items) {
+  const counts = { "主体性": 0, "自己調整": 0, "協働": 0 };
+  const detailDates = { "主体性": new Set(), "自己調整": new Set(), "協働": new Set() };
+
+  items.forEach(d => {
+    const text = [
+      d.independence, d.independence_detail,
+      d.growth, d.growth_detail,
+      d.good, d.good_detail
+    ].filter(Boolean).join(" ");
+
+    Object.entries(AUTONOMY_AXES).forEach(([axis, keywords]) => {
+      const hits = keywords.reduce((sum, kw) => {
+        const matches = text.match(new RegExp(escapeRegExp(kw), "g"));
+        return sum + (matches ? matches.length : 0);
+      }, 0);
+      if (hits > 0) {
+        counts[axis] += hits;
+        detailDates[axis].add(d.date);
+      }
+    });
+  });
+
+  return {
+    counts: counts,
+    dates: detailDates,
+    total: counts["主体性"] + counts["自己調整"] + counts["協働"]
+  };
+}
+
+function escapeRegExp(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/* === 自動生成のナラティブサマリ（自立育成の文脈） === */
+function renderNarrativeSummary(items, label, totalPositive, avgFB, autonomy) {
   const sorted = [...items].sort((a, b) => new Date(a.date) - new Date(b.date));
   const first = sorted[0];
   const last = sorted[sorted.length - 1];
-  const subjectsTxt = subjects.slice(0, 4).join("・");
-  const trendTxt = items.length >= 3
-    ? (last.positive_count > first.positive_count
-        ? "肯定発言数が期間内で<strong>増加傾向</strong>にあります。"
-        : last.positive_count < first.positive_count
-          ? "肯定発言数は<strong>やや落ち着き</strong>を見せています。"
-          : "肯定発言数は<strong>安定的</strong>に推移しています。")
-    : "";
+
+  // 3軸のバランス評価
+  const c = autonomy.counts;
+  const max = Math.max(c["主体性"], c["自己調整"], c["協働"]);
+  const min = Math.min(c["主体性"], c["自己調整"], c["協働"]);
+  const balance = (max - min) <= Math.max(2, max * 0.3);
+  const dominantAxis = Object.entries(c).sort((a, b) => b[1] - a[1])[0][0];
+
+  // 傾向の表現
+  let balanceMsg;
+  if (autonomy.total === 0) {
+    balanceMsg = "自立に関する言及がまだ少なく、<em>意識的な観察と記録</em>を増やしたい時期です。";
+  } else if (balance) {
+    balanceMsg = `主体性・自己調整・協働の<strong>3軸がバランス良く</strong>育まれています。`;
+  } else {
+    balanceMsg = `<strong>${dominantAxis}</strong>に関する場面が多く記録されています。残り2軸への意識的な目配りが次の課題です。`;
+  }
+
+  // FB推移の評価
+  let fbMsg = "";
+  if (items.length >= 3) {
+    const ratio = last.positive_count / Math.max(first.positive_count, 1);
+    if (ratio > 1.1) fbMsg = "肯定的な働きかけが期間内で<strong>増加傾向</strong>にあります。";
+    else if (ratio < 0.9) fbMsg = "肯定的な働きかけは<strong>やや控えめ</strong>になっています。教師の体力サインに注意。";
+    else fbMsg = "肯定的な働きかけは<strong>安定的</strong>に継続されています。";
+  }
+
+  // 育成成果の判定
+  let assessment;
+  if (autonomy.total >= items.length * 3 && avgFB >= 15) {
+    assessment = `🎯 <strong>「自立した学習者」育成の指導が高い水準で機能しています。</strong>`;
+  } else if (autonomy.total >= items.length * 1.5 && avgFB >= 10) {
+    assessment = `🌱 <strong>「自立した学習者」育成の方向に着実に進んでいます。</strong>`;
+  } else if (items.length >= 2) {
+    assessment = `💭 自立育成の意識を<strong>もう一段強化する余地</strong>があります。`;
+  } else {
+    assessment = `📝 データを蓄積することで傾向が見えてきます。`;
+  }
 
   return `
     <div class="section">
       <div class="section-title">💡 ${label}の概観</div>
       <div class="narrative-summary">
-        この${label}は<strong>${items.length}日</strong>分の分析データが記録されました。<br>
-        肯定発言は合計<strong>${totalPositive}回</strong>（1日平均<strong>${avgFB}回</strong>）。
-        中心的な教科は<strong>${subjectsTxt}</strong>${subjects.length > 4 ? "など" : ""}でした。<br>
-        ${trendTxt}
+        ${assessment}<br><br>
+        この${label}は<strong>${items.length}日</strong>分の記録、肯定発言は合計<strong>${totalPositive}回</strong>（1日平均<strong>${avgFB}回</strong>）でした。<br>
+        自立に関する場面は<strong>${autonomy.total}件</strong>言及されています。${balanceMsg}<br>
+        ${fbMsg}
       </div>
     </div>`;
 }
 
-/* === ハイライト === */
-function renderHighlights(items, totalPositive, avgFB) {
+/* === 自立育成のハイライト === */
+function renderAutonomyHighlights(items) {
+  // 各日の自立言及数を計算
+  const itemsWithAutonomy = items.map(d => {
+    const text = [d.independence, d.independence_detail, d.growth, d.growth_detail].filter(Boolean).join(" ");
+    let autonomyHits = 0;
+    Object.values(AUTONOMY_AXES).forEach(keywords => {
+      keywords.forEach(kw => {
+        const m = text.match(new RegExp(escapeRegExp(kw), "g"));
+        if (m) autonomyHits += m.length;
+      });
+    });
+    return { ...d, autonomyHits };
+  });
+
+  const sortedByAutonomy = [...itemsWithAutonomy].sort((a, b) => b.autonomyHits - a.autonomyHits);
   const sortedByFB = [...items].sort((a, b) => (b.positive_count || 0) - (a.positive_count || 0));
-  const topDay = sortedByFB[0];
-  const lowDay = sortedByFB[sortedByFB.length - 1];
-  const photoMostDay = [...items].sort((a, b) => getPhotosForDate(b.date).length - getPhotosForDate(a.date).length)[0];
-  const photoMostCount = getPhotosForDate(photoMostDay.date).length;
+
+  const topAutonomyDay = sortedByAutonomy[0];
+  const topFBDay = sortedByFB[0];
+
+  let highlights = "";
+
+  if (topAutonomyDay && topAutonomyDay.autonomyHits > 0) {
+    highlights += `<div class="highlight-item">🌱 <strong>自立場面が最も豊かな日:</strong> ${formatDateJP(topAutonomyDay.date)}（${topAutonomyDay.autonomyHits}件の言及）</div>`;
+  }
+  highlights += `<div class="highlight-item">🥇 <strong>肯定発言が最も多い日:</strong> ${formatDateJP(topFBDay.date)}（${topFBDay.positive_count}回）</div>`;
+
+  // 子どもの自走に関する記述があれば抽出
+  const selfRunDays = items.filter(d => {
+    const text = [d.good, d.good_detail, d.growth, d.growth_detail].filter(Boolean).join(" ");
+    return /自走|自分で(動|考)|不在|任せ|声かけ前/.test(text);
+  });
+  if (selfRunDays.length > 0) {
+    highlights += `<div class="highlight-item">⚡ <strong>子どもの自走場面:</strong> ${selfRunDays.length}日の記録に登場</div>`;
+  }
 
   return `
     <div class="section">
       <div class="section-title">🏆 ハイライト</div>
-      <div class="highlight-box">
-        <div class="highlight-item">🥇 <strong>最多肯定発言:</strong> ${formatDateJP(topDay.date)}（${topDay.positive_count}回）</div>
-        ${items.length > 1 ? `<div class="highlight-item">🌱 <strong>もっとも静かな日:</strong> ${formatDateJP(lowDay.date)}（${lowDay.positive_count}回）</div>` : ""}
-        ${photoMostCount > 0 ? `<div class="highlight-item">📸 <strong>写真が最も多い日:</strong> ${formatDateJP(photoMostDay.date)}（${photoMostCount}枚）</div>` : ""}
-      </div>
+      <div class="highlight-box">${highlights}</div>
+    </div>`;
+}
+
+/* === 自立3軸のバランスチャート === */
+function renderAutonomyChart(autonomy) {
+  const c = autonomy.counts;
+  const max = Math.max(c["主体性"], c["自己調整"], c["協働"], 1);
+
+  const axisInfo = [
+    { name: "主体性", emoji: "🎯", color: "#e74c3c" },
+    { name: "自己調整", emoji: "🔄", color: "#3498db" },
+    { name: "協働", emoji: "🤝", color: "#27ae60" }
+  ];
+
+  const bars = axisInfo.map(({ name, emoji, color }) => {
+    const value = c[name];
+    const ratio = (value / max) * 100;
+    const dateCount = autonomy.dates[name].size;
+    return `
+      <div class="chart-bar-row">
+        <div class="chart-bar-label">${emoji} ${name}</div>
+        <div class="chart-bar-track">
+          <div class="chart-bar-fill" style="width:${ratio}%; background:linear-gradient(90deg, ${color}, ${color}cc);"></div>
+        </div>
+        <div class="chart-bar-value">${value}件 / ${dateCount}日</div>
+      </div>`;
+  }).join("");
+
+  return `
+    <div class="section">
+      <div class="section-title">🎯 「自立した学習者」3軸の育成バランス</div>
+      <div class="period-chart">${bars}</div>
+      <p style="font-size:0.78em; color:#95a5a6; margin-top:8px;">※ 分析記述から「主体性／自己調整／協働」のキーワードを自動抽出</p>
+    </div>`;
+}
+
+/* === 指導の傾向分析 === */
+function renderPedagogyAnalysis(items) {
+  const themeHits = {};
+  items.forEach(d => {
+    const text = [d.improve, d.improve_detail, d.next, d.next_detail].filter(Boolean).join(" ");
+    Object.entries(PEDAGOGY_THEMES).forEach(([theme, keywords]) => {
+      const found = keywords.some(kw => text.includes(kw));
+      if (found) {
+        if (!themeHits[theme]) themeHits[theme] = new Set();
+        themeHits[theme].add(d.date);
+      }
+    });
+  });
+  const sorted = Object.entries(themeHits).sort((a, b) => b[1].size - a[1].size);
+  if (sorted.length === 0) return "";
+
+  const max = sorted[0][1].size;
+  const bars = sorted.map(([theme, dates]) => {
+    const ratio = (dates.size / max) * 100;
+    return `
+      <div class="chart-bar-row">
+        <div class="chart-bar-label" style="min-width:140px;">${theme}</div>
+        <div class="chart-bar-track">
+          <div class="chart-bar-fill" style="width:${ratio}%; background:linear-gradient(90deg, #f39c12, #e67e22);"></div>
+        </div>
+        <div class="chart-bar-value">${dates.size}日</div>
+      </div>`;
+  }).join("");
+
+  return `
+    <div class="section">
+      <div class="section-title">🎓 指導の重点テーマ（改善点・次回課題から抽出）</div>
+      <div class="period-chart">${bars}</div>
+      <p style="font-size:0.78em; color:#95a5a6; margin-top:8px;">※ 繰り返し登場するテーマは、教師自身が自覚している継続課題を示します</p>
     </div>`;
 }
 
@@ -2261,12 +2444,12 @@ function renderSubjectChart(items) {
     </div>`;
 }
 
-/* === キーフレーズの登場 === */
+/* === 自立を支えたキーフレーズ === */
 const PERIOD_KEYWORDS = [
   "けテぶれ", "心マトリクス", "＋れ", "QNKS", "希望永続",
   "自分への嘘", "自由進度", "大分析", "聞く", "試行錯誤",
   "プロセス", "目と耳と心", "自走", "学級目標", "プラス点",
-  "節目", "メリハリ", "信頼"
+  "節目", "メリハリ", "信頼", "自分で考え", "任せる"
 ];
 function renderKeywordSection(items) {
   const hits = {};
@@ -2293,9 +2476,9 @@ function renderKeywordSection(items) {
 
   return `
     <div class="section">
-      <div class="section-title">🔑 期間内に登場したキーフレーズ</div>
+      <div class="section-title">🔑 自立を支えたキーフレーズ</div>
       <div class="keyword-grid">${tags}</div>
-      <p style="font-size:0.78em; color:#95a5a6; margin-top:6px;">※タップでホバー時に登場日が表示されます</p>
+      <p style="font-size:0.78em; color:#95a5a6; margin-top:6px;">※ 自立した学習者育成に関連する用語の登場日数</p>
     </div>`;
 }
 
