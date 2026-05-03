@@ -308,12 +308,15 @@
   }
   .photo-thumb {
     position: relative;
-    aspect-ratio: 1;
+    aspect-ratio: 4 / 3;  /* 横長気味の表示エリアにする */
     border-radius: 8px;
     overflow: hidden;
     cursor: pointer;
-    background: #ebeef2;
+    background: #2c3e50;  /* 背景は黒寄りで写真が浮き立つように */
     transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
   .photo-thumb:hover {
     transform: scale(1.03);
@@ -322,7 +325,7 @@
   .photo-thumb img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;  /* 全体が見えるように */
   }
   .photo-thumb-caption {
     position: absolute;
@@ -693,10 +696,13 @@
 <div class="category-picker" id="categoryPicker">
   <div class="category-picker-card">
     <h3>📷 写真のカテゴリを選択</h3>
+    <div id="uploadProgress" style="font-size:0.85em; color:#7f8c8d; margin-bottom:12px;"></div>
+    <img id="uploadPreview" style="display:none; max-width:100%; max-height:160px; object-fit:contain; background:#2c3e50; border-radius:8px; margin-bottom:12px;" alt="プレビュー">
     <div class="category-picker-buttons" id="categoryButtons"></div>
     <input type="text" id="captionInput" placeholder="キャプション（任意）：例「丸つけレベルの板書」">
     <div class="actions">
       <button class="btn-cancel" id="cancelUpload">キャンセル</button>
+      <button class="btn-save" id="saveAllUpload" style="display:none; background:#27ae60;">全部このカテゴリで保存</button>
       <button class="btn-save" id="confirmUpload">保存</button>
     </div>
   </div>
@@ -1237,21 +1243,49 @@ function processNextFile(files, index) {
 function showCategoryPicker() {
   const picker = document.getElementById("categoryPicker");
   const buttons = document.getElementById("categoryButtons");
+  const progress = document.getElementById("uploadProgress");
+  const preview = document.getElementById("uploadPreview");
+  const saveAllBtn = document.getElementById("saveAllUpload");
+
   buttons.innerHTML = PHOTO_CATEGORIES.map(cat =>
     `<button data-category="${cat}">${getCategoryEmoji(cat)} ${cat}</button>`
   ).join("");
   document.getElementById("captionInput").value = "";
+
+  // プレビュー画像表示
+  if (pendingUpload && pendingUpload.dataUrl) {
+    preview.src = pendingUpload.dataUrl;
+    preview.style.display = "block";
+  } else {
+    preview.style.display = "none";
+  }
+
+  // 進捗表示と「全部保存」ボタンの表示制御
+  if (pendingUpload && pendingUpload.remainingFiles) {
+    const total = pendingUpload.remainingFiles.length;
+    const current = pendingUpload.currentIndex + 1;
+    const remaining = total - pendingUpload.currentIndex;
+    progress.textContent = `📦 ${current} / ${total} 枚目 ｜ ファイル名: ${pendingUpload.fileName}`;
+    // 残り2枚以上ある時だけ「全部保存」ボタンを表示
+    saveAllBtn.style.display = remaining >= 2 ? "inline-block" : "none";
+    saveAllBtn.textContent = `📦 残り${remaining}枚を全部このカテゴリで保存`;
+  } else {
+    progress.textContent = "";
+    saveAllBtn.style.display = "none";
+  }
+
   picker.classList.add("show");
 
   buttons.querySelectorAll("button").forEach(btn => {
     btn.addEventListener("click", () => {
-      buttons.querySelectorAll("button").forEach(b => b.style.borderColor = "#e1e8ed");
+      buttons.querySelectorAll("button").forEach(b => {
+        b.style.borderColor = "#e1e8ed";
+        b.style.background = "white";
+        delete b.dataset.selected;
+      });
       btn.style.borderColor = "#667eea";
       btn.style.background = "#f0f3f7";
       btn.dataset.selected = "true";
-      buttons.querySelectorAll("button").forEach(b => {
-        if (b !== btn) delete b.dataset.selected;
-      });
     });
   });
 }
@@ -1273,6 +1307,7 @@ document.getElementById("cancelUpload").addEventListener("click", () => {
   pendingUpload = null;
 });
 
+/* 1枚だけ保存（個別カテゴリ） */
 document.getElementById("confirmUpload").addEventListener("click", () => {
   if (!pendingUpload) return;
   const selected = document.querySelector("#categoryButtons button[data-selected='true']");
@@ -1298,6 +1333,50 @@ document.getElementById("confirmUpload").addEventListener("click", () => {
     renderDetail();
   }
 });
+
+/* 残りを全部同じカテゴリで一括保存 */
+document.getElementById("saveAllUpload").addEventListener("click", async () => {
+  if (!pendingUpload) return;
+  const selected = document.querySelector("#categoryButtons button[data-selected='true']");
+  const category = selected ? selected.dataset.category : "その他";
+  const baseCaption = document.getElementById("captionInput").value.trim();
+
+  const files = pendingUpload.remainingFiles;
+  const startIndex = pendingUpload.currentIndex;
+  const date = pendingUpload.date;
+
+  // 現在表示中の写真を保存
+  addUserPhoto(date, {
+    url: pendingUpload.dataUrl,
+    category: category,
+    caption: baseCaption || pendingUpload.fileName
+  });
+
+  // 残りのファイルを順次読み込んで一括保存
+  for (let i = startIndex + 1; i < files.length; i++) {
+    const dataUrl = await readFileAsDataURL(files[i]);
+    addUserPhoto(date, {
+      url: dataUrl,
+      category: category,
+      caption: baseCaption ? `${baseCaption} ${i - startIndex + 1}` : files[i].name
+    });
+  }
+
+  document.getElementById("categoryPicker").classList.remove("show");
+  pendingUpload = null;
+  renderCalendar();
+  renderDetail();
+});
+
+/* ファイルをDataURLとして読み込む（Promise版） */
+function readFileAsDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => resolve(e.target.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
 
 /* ===== ライトボックス ===== */
 function openLightbox(url, caption) {
@@ -1369,7 +1448,7 @@ function renderRangeDetail(card, range, label) {
     const photos = getPhotosForDate(d.date);
     const photoStrip = photos.length > 0
       ? `<div style="display:flex; gap:6px; margin-top:8px; flex-wrap:wrap;">
-          ${photos.slice(0, 4).map(p => `<img src="${p.url}" style="width:60px; height:60px; object-fit:cover; border-radius:4px;" alt="">`).join("")}
+          ${photos.slice(0, 4).map(p => `<img src="${p.url}" style="width:60px; height:60px; object-fit:contain; background:#2c3e50; border-radius:4px;" alt="">`).join("")}
           ${photos.length > 4 ? `<div style="width:60px; height:60px; background:#f0f3f7; display:flex; align-items:center; justify-content:center; border-radius:4px; font-size:0.8em; color:#5a6c7d;">+${photos.length - 4}</div>` : ""}
         </div>`
       : "";
