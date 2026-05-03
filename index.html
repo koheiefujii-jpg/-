@@ -964,8 +964,15 @@
 <div class="container">
 
   <header>
-    <h1>📊 授業分析ダッシュボード</h1>
-    <p>6年4組 / 自立した学習者育成プロジェクト</p>
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px;">
+      <div>
+        <h1>📊 授業分析ダッシュボード</h1>
+        <p>6年4組 / 自立した学習者育成プロジェクト</p>
+      </div>
+      <button id="obsidianBtn" style="background:rgba(255,255,255,0.2); color:white; border:1px solid rgba(255,255,255,0.4); padding:8px 14px; border-radius:8px; cursor:pointer; font-size:0.9em; font-weight:600; backdrop-filter:blur(4px);">
+        📓 Obsidian連携
+      </button>
+    </div>
   </header>
 
   <div class="period-selector">
@@ -1036,6 +1043,61 @@
       <button class="btn-cancel" id="cancelUpload">キャンセル</button>
       <button class="btn-save" id="saveAllUpload" style="display:none; background:#27ae60;">全部このカテゴリで保存</button>
       <button class="btn-save" id="confirmUpload">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 📓 Obsidian連携モーダル -->
+<div class="category-picker" id="obsidianModal">
+  <div class="category-picker-card" style="max-width:480px;">
+    <h3>📓 Obsidian連携</h3>
+    <div class="category-picker-scroll">
+      <p style="font-size:0.85em; color:#5a6c7d; margin-bottom:12px;">
+        分析データをObsidian形式のMarkdownで出力します。
+      </p>
+
+      <!-- Vault名の設定 -->
+      <div style="background:#f5f7ff; border-radius:8px; padding:10px 12px; margin-bottom:14px;">
+        <label style="font-size:0.82em; color:#5a6c7d; display:block; margin-bottom:4px;">
+          Vault名（Obsidianで開くリンク用 / 任意）
+        </label>
+        <input type="text" id="vaultNameInput" placeholder="例：MyVault" style="width:100%; padding:8px 10px; border:1px solid #d4dffc; border-radius:6px; font-size:0.9em;">
+      </div>
+
+      <!-- 出力オプション -->
+      <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:14px;">
+        <button class="obsidian-export-btn" data-action="export-current" style="text-align:left; padding:14px; border:2px solid #667eea; background:white; border-radius:10px; cursor:pointer; font-weight:600; color:#667eea; transition:all 0.2s;">
+          📄 表示中の日のMarkdownをダウンロード
+          <div style="font-size:0.78em; color:#7f8c8d; font-weight:normal; margin-top:4px;">→ ファイル名: YYYY-MM-DD.md</div>
+        </button>
+        <button class="obsidian-export-btn" data-action="copy-current" style="text-align:left; padding:14px; border:2px solid #c8d0db; background:white; border-radius:10px; cursor:pointer; font-weight:600; color:#5a6c7d; transition:all 0.2s;">
+          📋 表示中の日をクリップボードにコピー
+          <div style="font-size:0.78em; color:#7f8c8d; font-weight:normal; margin-top:4px;">→ Obsidianに直接貼り付け可</div>
+        </button>
+        <button class="obsidian-export-btn" data-action="export-all" style="text-align:left; padding:14px; border:2px solid #c8d0db; background:white; border-radius:10px; cursor:pointer; font-weight:600; color:#5a6c7d; transition:all 0.2s;">
+          📦 全データを一括ダウンロード
+          <div style="font-size:0.78em; color:#7f8c8d; font-weight:normal; margin-top:4px;">→ 全エントリ＋総括ノート＋README</div>
+        </button>
+      </div>
+
+      <!-- 使い方ガイド -->
+      <details style="background:#fafbfc; border-radius:6px; padding:10px 12px; font-size:0.85em;">
+        <summary style="cursor:pointer; color:#667eea; font-weight:600;">💡 Obsidianへの取り込み方</summary>
+        <div style="margin-top:10px; line-height:1.7; color:#34495e;">
+          <ol style="padding-left:20px;">
+            <li>上のボタンでmarkdownをダウンロード or コピー</li>
+            <li>Obsidian Vault内の好きな場所（例: <code>授業分析/</code>）に保存 or 貼り付け</li>
+            <li>Obsidianが自動でWikilink（<code>[[けテぶれ]]</code>等）を認識</li>
+            <li>グラフビューで概念のつながりが見える</li>
+          </ol>
+          <div style="margin-top:8px; padding:8px; background:white; border-left:3px solid #667eea; border-radius:0 4px 4px 0;">
+            <strong>含まれる要素</strong>: YAMLフロントマター・タグ・Wikilink（けテぶれ／心マトリクス／＋れ等）・写真参照
+          </div>
+        </div>
+      </details>
+    </div>
+    <div class="actions">
+      <button class="btn-cancel" id="closeObsidianModal">閉じる</button>
     </div>
   </div>
 </div>
@@ -3915,6 +3977,244 @@ document.querySelectorAll(".period-btn").forEach(btn => {
     currentPeriod = btn.dataset.period;
     expandedDrillDown = null;  // 期間切替でリセット
     renderDetail();
+  });
+});
+
+/* ============================================================
+   📓 Obsidian連携：Markdownエクスポート
+   ============================================================ */
+
+const OBSIDIAN_VAULT_KEY = "obsidian_vault_name_v1";
+
+/* Wikilink化するキーワード */
+const WIKILINK_KEYWORDS = [
+  "けテぶれ", "心マトリクス", "＋れ", "QNKS", "希望永続",
+  "自分への嘘", "自由進度", "大分析", "試行錯誤",
+  "目と耳と心", "プラス点", "学級目標", "節目", "メリハリ",
+  "主体性", "自己調整", "協働", "プロセス"
+];
+
+/* テキスト中のキーワードを Wikilink に変換 */
+function applyWikilinks(text) {
+  if (!text) return "";
+  let result = String(text);
+  WIKILINK_KEYWORDS.forEach(kw => {
+    // 既に [[ ]] で囲まれているものは置換しない
+    const re = new RegExp(`(?<!\\[\\[)${escapeRegExp(kw)}(?!\\]\\])`, "g");
+    result = result.replace(re, `[[${kw}]]`);
+  });
+  return result;
+}
+
+/* 1日分のデータをMarkdownに変換 */
+function generateDayMarkdown(data) {
+  const photos = getPhotosForDate(data.date);
+  const subjects = data.subject.split(/[・、]/).filter(Boolean);
+  const tags = ["授業分析", `${data.class}`, ...subjects.map(s => s.trim())];
+
+  // タグから検出されたキーワードも追加
+  const allText = [
+    data.good, data.improve, data.growth, data.independence, data.next,
+    data.good_detail, data.improve_detail, data.growth_detail,
+    data.independence_detail, data.next_detail
+  ].filter(Boolean).join(" ");
+  WIKILINK_KEYWORDS.forEach(kw => {
+    if (allText.includes(kw)) tags.push(kw.replace(/\s/g, ""));
+  });
+
+  // 重複除去
+  const uniqueTags = [...new Set(tags.filter(Boolean))];
+
+  // フロントマター
+  let md = `---\n`;
+  md += `date: ${data.date}\n`;
+  md += `class: ${data.class}\n`;
+  md += `subject: ${data.subject}\n`;
+  md += `positive_count: ${data.positive_count || 0}\n`;
+  md += `tags:\n`;
+  uniqueTags.forEach(t => md += `  - ${t}\n`);
+  md += `---\n\n`;
+
+  // タイトル
+  md += `# ${formatDateJP(data.date)} 授業分析\n\n`;
+
+  // 概要
+  md += `## 📚 概要\n`;
+  md += `- **クラス**: ${data.class}\n`;
+  md += `- **教科**: ${data.subject}\n`;
+  md += `- **肯定発言数**: ${data.positive_count || 0}回\n`;
+  md += `- **写真**: ${photos.length}枚\n\n`;
+
+  // 各セクション
+  const sections = [
+    { title: "🌟 よかったところ", short: data.good, detail: data.good_detail },
+    { title: "🔧 改善点", short: data.improve, detail: data.improve_detail },
+    { title: "🌱 成長の記録", short: data.growth, detail: data.growth_detail },
+    { title: "🎯 自立した学習者との関連", short: data.independence, detail: data.independence_detail },
+    { title: "📋 次回への課題", short: data.next, detail: data.next_detail }
+  ];
+
+  sections.forEach(s => {
+    if (!s.short && !s.detail) return;
+    md += `## ${s.title}\n\n`;
+    if (s.short) md += applyWikilinks(s.short) + "\n\n";
+    if (s.detail) {
+      md += `### 詳細\n\n`;
+      md += applyWikilinks(s.detail) + "\n\n";
+    }
+  });
+
+  // 研究視点
+  md += `## 🔬 動機×自己調整の研究視点\n\n`;
+  if (data.motivation || data.motivation_detail) {
+    md += `### 🌊 動機（やりたさ）の状態\n${applyWikilinks(data.motivation || "")}\n\n`;
+    if (data.motivation_detail) md += applyWikilinks(data.motivation_detail) + "\n\n";
+  }
+  if (data.self_regulation || data.self_regulation_detail) {
+    md += `### 🎯 自己調整の実態\n${applyWikilinks(data.self_regulation || "")}\n\n`;
+    if (data.self_regulation_detail) md += applyWikilinks(data.self_regulation_detail) + "\n\n";
+  }
+  if (data.transition || data.transition_detail) {
+    md += `### 🔄 動機→自己調整の移行\n${applyWikilinks(data.transition || "")}\n\n`;
+    if (data.transition_detail) md += applyWikilinks(data.transition_detail) + "\n\n";
+  }
+  if (data.teacher_intervention || data.teacher_intervention_detail) {
+    md += `### 👨‍🏫 教師の関わりの影響\n${applyWikilinks(data.teacher_intervention || "")}\n\n`;
+    if (data.teacher_intervention_detail) md += applyWikilinks(data.teacher_intervention_detail) + "\n\n";
+  }
+  if (data.hypothesis) {
+    md += `### 💭 仮説\n${applyWikilinks(data.hypothesis)}\n\n`;
+  }
+
+  // 写真（参照のみ。実体はダッシュボード or ローカルに）
+  if (photos.length > 0) {
+    md += `## 📷 写真（${photos.length}枚）\n\n`;
+    photos.forEach(p => {
+      md += `- **${p.category}**${p.caption ? ` - ${p.caption}` : ""}\n`;
+    });
+    md += `\n> 写真の実体はダッシュボード上で閲覧できます。\n\n`;
+  }
+
+  // 関連リンク
+  md += `## 🔗 関連\n`;
+  md += `- [[4月総括レポート]]\n`;
+  md += `- [[5月戦略プラン]]\n`;
+  uniqueTags.filter(t => WIKILINK_KEYWORDS.includes(t)).forEach(t => {
+    md += `- [[${t}]]\n`;
+  });
+  md += `\n---\n*生成日: ${new Date().toISOString().split("T")[0]} - 授業分析ダッシュボードより*\n`;
+
+  return md;
+}
+
+/* インデックスノート（README）の生成 */
+function generateIndexMarkdown() {
+  const sorted = [...ANALYSIS_DATA].sort((a, b) => new Date(a.date) - new Date(b.date));
+  let md = `---\ntags: [授業分析, インデックス]\n---\n\n`;
+  md += `# 授業分析インデックス\n\n`;
+  md += `6年4組 / 自立した学習者育成プロジェクト\n\n`;
+  md += `## 📅 全エントリ\n\n`;
+  sorted.forEach(d => {
+    md += `- [[${d.date}]] ${formatDateJP(d.date)} - ${d.subject}（FB: ${d.positive_count || 0}回）\n`;
+  });
+  md += `\n## 🔑 主要キーフレーズ\n\n`;
+  WIKILINK_KEYWORDS.forEach(kw => {
+    md += `- [[${kw}]]\n`;
+  });
+  md += `\n## 📊 関連文書\n`;
+  md += `- [[4月総括レポート]]\n- [[5月戦略プラン]]\n`;
+  return md;
+}
+
+/* ファイルダウンロード */
+function downloadFile(filename, content) {
+  const blob = new Blob([content], { type: "text/markdown;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+/* クリップボードにコピー */
+async function copyToClipboard(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch (e) {
+    // フォールバック
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+      return true;
+    } catch (e2) {
+      document.body.removeChild(ta);
+      return false;
+    }
+  }
+}
+
+/* === Obsidian連携モーダルのイベント === */
+document.getElementById("obsidianBtn").addEventListener("click", () => {
+  document.getElementById("obsidianModal").classList.add("show");
+  // 保存済みVault名を復元
+  const saved = localStorage.getItem(OBSIDIAN_VAULT_KEY) || "";
+  document.getElementById("vaultNameInput").value = saved;
+});
+document.getElementById("closeObsidianModal").addEventListener("click", () => {
+  // Vault名を保存
+  const v = document.getElementById("vaultNameInput").value.trim();
+  if (v) localStorage.setItem(OBSIDIAN_VAULT_KEY, v);
+  document.getElementById("obsidianModal").classList.remove("show");
+});
+
+document.querySelectorAll(".obsidian-export-btn").forEach(btn => {
+  btn.addEventListener("click", async () => {
+    const action = btn.dataset.action;
+
+    if (action === "export-current" || action === "copy-current") {
+      if (!selectedDate) {
+        alert("日付を選んでから実行してください。");
+        return;
+      }
+      const data = getDataByDate(selectedDate);
+      if (!data) {
+        alert("この日のデータがありません。");
+        return;
+      }
+      const md = generateDayMarkdown(data);
+      if (action === "export-current") {
+        downloadFile(`${data.date}.md`, md);
+      } else {
+        const ok = await copyToClipboard(md);
+        alert(ok ? "✅ クリップボードにコピーしました。Obsidianに貼り付けてください。" : "コピーに失敗しました。");
+      }
+    } else if (action === "export-all") {
+      // 全エントリを順次ダウンロード
+      const total = ANALYSIS_DATA.length;
+      if (!confirm(`全 ${total} エントリ + インデックスを順次ダウンロードします。よろしいですか？`)) return;
+
+      // インデックス
+      downloadFile("_index.md", generateIndexMarkdown());
+
+      // 各エントリ
+      ANALYSIS_DATA.forEach((d, i) => {
+        setTimeout(() => {
+          downloadFile(`${d.date}.md`, generateDayMarkdown(d));
+        }, (i + 1) * 250);
+      });
+
+      setTimeout(() => {
+        alert(`✅ ${total + 1} ファイルのダウンロードを開始しました。\n\nObsidian Vault内の任意のフォルダに保存してください。`);
+      }, (total + 1) * 250 + 100);
+    }
   });
 });
 
