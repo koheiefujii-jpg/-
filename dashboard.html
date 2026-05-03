@@ -649,6 +649,115 @@
   }
   .entry-summary { color: #34495e; font-size: 0.9em; }
 
+  /* ============================================
+     期間まとめ：チャート＆ビジュアル
+     ============================================ */
+  .period-chart {
+    margin-top: 8px;
+  }
+  .chart-bar-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 6px 0;
+    font-size: 0.85em;
+  }
+  .chart-bar-label {
+    min-width: 100px;
+    color: #5a6c7d;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+  .chart-bar-track {
+    flex: 1;
+    background: #ecf0f1;
+    height: 22px;
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+    min-width: 50px;
+  }
+  .chart-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #667eea, #764ba2);
+    border-radius: 4px;
+    transition: width 0.4s;
+  }
+  .chart-bar-value {
+    min-width: 50px;
+    text-align: right;
+    font-weight: 700;
+    color: #2c3e50;
+    flex-shrink: 0;
+  }
+
+  /* キーワードタグ */
+  .keyword-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .keyword-tag {
+    background: white;
+    border: 1.5px solid #d4dffc;
+    border-radius: 16px;
+    padding: 6px 10px 6px 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85em;
+    color: #2c3e50;
+    transition: all 0.15s;
+  }
+  .keyword-tag:hover {
+    border-color: #667eea;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(102, 126, 234, 0.15);
+  }
+  .keyword-tag strong { font-weight: 700; }
+  .keyword-count {
+    background: #667eea;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.75em;
+    font-weight: 700;
+  }
+
+  /* ハイライトボックス */
+  .highlight-box {
+    background: linear-gradient(135deg, #fff5e6 0%, #fff0d4 100%);
+    border-left: 4px solid #f39c12;
+    padding: 14px 16px;
+    border-radius: 0 8px 8px 0;
+    margin-top: 8px;
+  }
+  .highlight-box h4 {
+    color: #d35400;
+    font-size: 0.95em;
+    margin-bottom: 8px;
+  }
+  .highlight-box .highlight-item {
+    font-size: 0.92em;
+    color: #2c3e50;
+    line-height: 1.7;
+    margin: 4px 0;
+  }
+
+  /* 自動生成のナラティブサマリ */
+  .narrative-summary {
+    background: linear-gradient(135deg, #f5f7ff 0%, #ede9fe 100%);
+    border-left: 4px solid #667eea;
+    padding: 16px 18px;
+    border-radius: 0 10px 10px 0;
+    margin-top: 8px;
+    font-size: 0.95em;
+    line-height: 1.8;
+    color: #2c3e50;
+  }
+  .narrative-summary strong { color: #5568d3; font-weight: 700; }
+
   ::-webkit-scrollbar { width: 8px; height: 8px; }
   ::-webkit-scrollbar-track { background: #f5f7fa; }
   ::-webkit-scrollbar-thumb { background: #c8cfd6; border-radius: 4px; }
@@ -1948,13 +2057,15 @@ document.getElementById("lightboxClose").addEventListener("click", () => {
 });
 
 /* ===== 期間まとめ表示 ===== */
+/* 期間まとめ表示（週/月/半年/年）*/
 function renderRangeDetail(card, range, label) {
   const items = getDataInRange(range.start, range.end);
   const totalPositive = items.reduce((sum, d) => sum + (d.positive_count || 0), 0);
   const subjects = [...new Set(items.flatMap(d => d.subject.split(/[・、]/)))].filter(Boolean);
   const totalPhotos = items.reduce((sum, d) => sum + getPhotosForDate(d.date).length, 0);
+  const avgFB = items.length > 0 ? Math.round(totalPositive / items.length) : 0;
 
-  let header = `
+  const header = `
     <div class="detail-header">
       <div>
         <div class="detail-date">${label}まとめ</div>
@@ -1969,10 +2080,12 @@ function renderRangeDetail(card, range, label) {
       <div class="empty-state">
         <div class="icon">📭</div>
         <h3>この${label}には分析データがありません</h3>
+        <p>カレンダーから別の${label}を選ぶか、データを追加してください。</p>
       </div>`;
     return;
   }
 
+  // ① サマリ統計
   const summary = `
     <div class="summary-grid">
       <div class="stat-card">
@@ -1984,6 +2097,10 @@ function renderRangeDetail(card, range, label) {
         <div class="stat-value">${totalPositive}回</div>
       </div>
       <div class="stat-card">
+        <div class="stat-label">1日平均FB</div>
+        <div class="stat-value">${avgFB}回</div>
+      </div>
+      <div class="stat-card">
         <div class="stat-label">扱った教科数</div>
         <div class="stat-value">${subjects.length}</div>
       </div>
@@ -1993,11 +2110,28 @@ function renderRangeDetail(card, range, label) {
       </div>
     </div>`;
 
+  // ② ナラティブサマリ（自動生成）
+  const narrativeBlock = renderNarrativeSummary(items, label, totalPositive, avgFB, subjects);
+
+  // ③ ハイライト
+  const highlightsBlock = renderHighlights(items, totalPositive, avgFB);
+
+  // ④ 肯定発言の推移チャート
+  const fbChartBlock = renderFBChart(items);
+
+  // ⑤ 教科別の登場回数チャート
+  const subjectChartBlock = renderSubjectChart(items);
+
+  // ⑥ キーフレーズの登場
+  const keywordBlock = renderKeywordSection(items);
+
+  // ⑦ 期間特性に応じた追加ブロック（半年/年）
   let trendBlock = "";
   if (currentPeriod === "half" || currentPeriod === "year") {
-    trendBlock = renderTrendAnalysis(items);
+    trendBlock = renderLongTermTrend(items, label);
   }
 
+  // ⑧ エントリ一覧
   const entries = items.map(d => {
     const photos = getPhotosForDate(d.date);
     const photoStrip = photos.length > 0
@@ -2008,44 +2142,207 @@ function renderRangeDetail(card, range, label) {
       : "";
     return `
       <div class="entry-item">
-        <div class="entry-date">${formatDateJP(d.date)} ｜ ${d.subject}${photos.length > 0 ? ` 📷${photos.length}` : ""}</div>
+        <div class="entry-date">${formatDateJP(d.date)} ｜ ${d.subject}${photos.length > 0 ? ` 📷${photos.length}` : ""} ｜ ⭐${d.positive_count || 0}</div>
         <div class="entry-summary">${d.good.length > 100 ? d.good.substring(0, 100) + "..." : d.good}</div>
         ${photoStrip}
       </div>`;
   }).join("");
 
-  card.innerHTML = header + summary + trendBlock + `
+  const entryListBlock = `
     <div class="section">
-      <div class="section-title">分析エントリ一覧</div>
+      <div class="section-title">📋 分析エントリ一覧</div>
       <div class="entry-list" style="margin-top:8px;">${entries}</div>
-    </div>
-  `;
+    </div>`;
+
+  card.innerHTML = header + summary + narrativeBlock + highlightsBlock
+    + fbChartBlock + subjectChartBlock + keywordBlock + trendBlock + entryListBlock;
 }
 
-function renderTrendAnalysis(items) {
-  const sortedByPositive = [...items].sort((a, b) => b.positive_count - a.positive_count);
-  const topDay = sortedByPositive[0];
-  const subjectFreq = {};
-  items.forEach(d => {
-    d.subject.split(/[・、]/).forEach(s => {
-      if (s) subjectFreq[s] = (subjectFreq[s] || 0) + 1;
-    });
-  });
-  const topSubjects = Object.entries(subjectFreq)
-    .sort((a, b) => b[1] - a[1]).slice(0, 3)
-    .map(([s, n]) => `${s}（${n}回）`).join("、");
+/* === 自動生成のナラティブサマリ === */
+function renderNarrativeSummary(items, label, totalPositive, avgFB, subjects) {
+  const sorted = [...items].sort((a, b) => new Date(a.date) - new Date(b.date));
+  const first = sorted[0];
+  const last = sorted[sorted.length - 1];
+  const subjectsTxt = subjects.slice(0, 4).join("・");
+  const trendTxt = items.length >= 3
+    ? (last.positive_count > first.positive_count
+        ? "肯定発言数が期間内で<strong>増加傾向</strong>にあります。"
+        : last.positive_count < first.positive_count
+          ? "肯定発言数は<strong>やや落ち着き</strong>を見せています。"
+          : "肯定発言数は<strong>安定的</strong>に推移しています。")
+    : "";
 
   return `
     <div class="section">
-      <div class="section-title">傾向分析</div>
-      <div class="section-content">
-🏆 最も肯定発言が多かった日：${formatDateJP(topDay.date)}（${topDay.positive_count}回）
-
-📚 頻出教科 TOP3：${topSubjects}
-
-📈 期間全体の傾向：${items.length}日分の分析データから、教師の指導モデルが継続的に運用されている様子が見られます。
+      <div class="section-title">💡 ${label}の概観</div>
+      <div class="narrative-summary">
+        この${label}は<strong>${items.length}日</strong>分の分析データが記録されました。<br>
+        肯定発言は合計<strong>${totalPositive}回</strong>（1日平均<strong>${avgFB}回</strong>）。
+        中心的な教科は<strong>${subjectsTxt}</strong>${subjects.length > 4 ? "など" : ""}でした。<br>
+        ${trendTxt}
       </div>
     </div>`;
+}
+
+/* === ハイライト === */
+function renderHighlights(items, totalPositive, avgFB) {
+  const sortedByFB = [...items].sort((a, b) => (b.positive_count || 0) - (a.positive_count || 0));
+  const topDay = sortedByFB[0];
+  const lowDay = sortedByFB[sortedByFB.length - 1];
+  const photoMostDay = [...items].sort((a, b) => getPhotosForDate(b.date).length - getPhotosForDate(a.date).length)[0];
+  const photoMostCount = getPhotosForDate(photoMostDay.date).length;
+
+  return `
+    <div class="section">
+      <div class="section-title">🏆 ハイライト</div>
+      <div class="highlight-box">
+        <div class="highlight-item">🥇 <strong>最多肯定発言:</strong> ${formatDateJP(topDay.date)}（${topDay.positive_count}回）</div>
+        ${items.length > 1 ? `<div class="highlight-item">🌱 <strong>もっとも静かな日:</strong> ${formatDateJP(lowDay.date)}（${lowDay.positive_count}回）</div>` : ""}
+        ${photoMostCount > 0 ? `<div class="highlight-item">📸 <strong>写真が最も多い日:</strong> ${formatDateJP(photoMostDay.date)}（${photoMostCount}枚）</div>` : ""}
+      </div>
+    </div>`;
+}
+
+/* === 肯定発言の推移チャート === */
+function renderFBChart(items) {
+  if (items.length === 0) return "";
+  const sortedItems = [...items].sort((a, b) => new Date(a.date) - new Date(b.date));
+  const maxFB = Math.max(...sortedItems.map(d => d.positive_count || 0), 1);
+
+  const bars = sortedItems.map(d => {
+    const value = d.positive_count || 0;
+    const ratio = (value / maxFB) * 100;
+    return `
+      <div class="chart-bar-row">
+        <div class="chart-bar-label">${formatDateShort(d.date)}</div>
+        <div class="chart-bar-track">
+          <div class="chart-bar-fill" style="width:${ratio}%"></div>
+        </div>
+        <div class="chart-bar-value">${value}回</div>
+      </div>`;
+  }).join("");
+
+  return `
+    <div class="section">
+      <div class="section-title">📈 肯定発言の推移</div>
+      <div class="period-chart">${bars}</div>
+    </div>`;
+}
+
+/* === 教科別の登場回数チャート === */
+function renderSubjectChart(items) {
+  const subjectFreq = {};
+  items.forEach(d => {
+    d.subject.split(/[・、]/).forEach(s => {
+      const trimmed = s.trim();
+      if (trimmed) subjectFreq[trimmed] = (subjectFreq[trimmed] || 0) + 1;
+    });
+  });
+  const sorted = Object.entries(subjectFreq).sort((a, b) => b[1] - a[1]);
+  if (sorted.length === 0) return "";
+  const maxCount = sorted[0][1];
+
+  const bars = sorted.map(([s, n]) => {
+    const ratio = (n / maxCount) * 100;
+    return `
+      <div class="chart-bar-row">
+        <div class="chart-bar-label">${s}</div>
+        <div class="chart-bar-track">
+          <div class="chart-bar-fill" style="width:${ratio}%"></div>
+        </div>
+        <div class="chart-bar-value">${n}日</div>
+      </div>`;
+  }).join("");
+
+  return `
+    <div class="section">
+      <div class="section-title">📚 教科別の登場回数</div>
+      <div class="period-chart">${bars}</div>
+    </div>`;
+}
+
+/* === キーフレーズの登場 === */
+const PERIOD_KEYWORDS = [
+  "けテぶれ", "心マトリクス", "＋れ", "QNKS", "希望永続",
+  "自分への嘘", "自由進度", "大分析", "聞く", "試行錯誤",
+  "プロセス", "目と耳と心", "自走", "学級目標", "プラス点",
+  "節目", "メリハリ", "信頼"
+];
+function renderKeywordSection(items) {
+  const hits = {};
+  items.forEach(d => {
+    const allText = [
+      d.good, d.improve, d.growth, d.independence, d.next,
+      d.good_detail, d.improve_detail, d.growth_detail, d.independence_detail, d.next_detail
+    ].filter(Boolean).join(" ");
+    PERIOD_KEYWORDS.forEach(kw => {
+      if (allText.includes(kw)) {
+        if (!hits[kw]) hits[kw] = new Set();
+        hits[kw].add(d.date);
+      }
+    });
+  });
+  const sorted = Object.entries(hits).sort((a, b) => b[1].size - a[1].size);
+  if (sorted.length === 0) return "";
+
+  const tags = sorted.map(([kw, dates]) => `
+    <div class="keyword-tag" title="${[...dates].map(formatDateJP).join('\n')}">
+      <strong>${kw}</strong>
+      <span class="keyword-count">${dates.size}日</span>
+    </div>`).join("");
+
+  return `
+    <div class="section">
+      <div class="section-title">🔑 期間内に登場したキーフレーズ</div>
+      <div class="keyword-grid">${tags}</div>
+      <p style="font-size:0.78em; color:#95a5a6; margin-top:6px;">※タップでホバー時に登場日が表示されます</p>
+    </div>`;
+}
+
+/* === 半年/年用の長期トレンド === */
+function renderLongTermTrend(items, label) {
+  // 月ごとに集計
+  const monthlyStats = {};
+  items.forEach(d => {
+    const ym = d.date.substring(0, 7); // "2026-04"
+    if (!monthlyStats[ym]) {
+      monthlyStats[ym] = { count: 0, totalFB: 0 };
+    }
+    monthlyStats[ym].count++;
+    monthlyStats[ym].totalFB += d.positive_count || 0;
+  });
+  const months = Object.keys(monthlyStats).sort();
+  if (months.length < 2) return "";
+
+  const maxFB = Math.max(...months.map(m => monthlyStats[m].totalFB), 1);
+
+  const monthBars = months.map(m => {
+    const stats = monthlyStats[m];
+    const [y, mo] = m.split("-");
+    const label = `${y}年${parseInt(mo)}月`;
+    const ratio = (stats.totalFB / maxFB) * 100;
+    return `
+      <div class="chart-bar-row">
+        <div class="chart-bar-label">${label}</div>
+        <div class="chart-bar-track">
+          <div class="chart-bar-fill" style="width:${ratio}%"></div>
+        </div>
+        <div class="chart-bar-value">${stats.totalFB}回 / ${stats.count}日</div>
+      </div>`;
+  }).join("");
+
+  return `
+    <div class="section">
+      <div class="section-title">📊 月ごとの推移</div>
+      <div class="period-chart">${monthBars}</div>
+    </div>`;
+}
+
+/* 短い日付フォーマット（例：4/10）*/
+function formatDateShort(dateStr) {
+  const d = new Date(dateStr);
+  const dayNames = ["日", "月", "火", "水", "木", "金", "土"];
+  return `${d.getMonth() + 1}/${d.getDate()}(${dayNames[d.getDay()]})`;
 }
 
 /* ===== 期間範囲計算 ===== */
