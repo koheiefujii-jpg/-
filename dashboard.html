@@ -14,10 +14,11 @@
 <title>Dashboard</title>
 
 <style>
-  /* 🛡 プライバシー対策（層2）：ロック画面が解除されるまで本体を非表示 */
-  body.locked > .container { display: none; }
-  body.locked .lock-screen { display: flex; }
-  .lock-screen { display: none; }
+  /* 🛡 プライバシー対策（層2）：ロック画面の表示制御
+     ※ より詳細な .lock-screen スタイルは下部にあるが、
+        このルールはより詳細度が高いセレクタなので必ず勝つ */
+  body.locked > .container { display: none !important; }
+  body:not(.locked) .lock-screen { display: none !important; }
 </style>
 
 <style>
