@@ -1368,6 +1368,106 @@ function renderSection(title, summary, detail, sectionId) {
     </div>`;
 }
 
+/* ============================================================
+   ★ 動機×自己調整の研究視点ブロック
+   - 既存の motivation/self_regulation/transition/teacher_intervention
+     フィールドがあれば優先使用
+   - なければ既存テキストから自動抽出
+   ============================================================ */
+function renderResearchLensBlock(data) {
+  // 全テキストを結合（自動検出用）
+  const allText = [
+    data.good, data.improve, data.growth, data.independence, data.next,
+    data.good_detail, data.improve_detail, data.growth_detail,
+    data.independence_detail, data.next_detail
+  ].filter(Boolean).join(" ");
+
+  // ① 動機（やりたさ）の状態を自動推定
+  const motivationAutoText = data.motivation || autoDetectMotivation(allText);
+  const selfRegAutoText = data.self_regulation || autoDetectSelfRegulation(allText);
+  const transitionAutoText = data.transition || autoDetectTransition(allText);
+  const interventionAutoText = data.teacher_intervention || autoDetectIntervention(allText);
+
+  return `
+    <div style="margin-top:24px; padding-top:20px; border-top:2px dashed #d4dffc;">
+      <div style="text-align:center; color:#667eea; font-weight:700; font-size:0.85em; margin-bottom:12px; letter-spacing:1px;">
+        🔬 動機 × 自己調整の研究視点
+      </div>
+      ${renderSection("🌊 動機（やりたさ）の状態", motivationAutoText, data.motivation_detail, `${data.date}-motivation`)}
+      ${renderSection("🎯 自己調整の実態", selfRegAutoText, data.self_regulation_detail, `${data.date}-selfreg`)}
+      ${renderSection("🔄 動機→自己調整の移行", transitionAutoText, data.transition_detail, `${data.date}-transition`)}
+      ${renderSection("👨‍🏫 教師の関わりの影響", interventionAutoText, data.teacher_intervention_detail, `${data.date}-intervention`)}
+      ${data.hypothesis ? `
+        <div class="section">
+          <div class="section-title">💭 この日から得られる仮説</div>
+          <div class="narrative-summary">${formatDetailText(data.hypothesis)}</div>
+        </div>` : ""}
+    </div>
+  `;
+}
+
+/* === 動機の自動推定 === */
+function autoDetectMotivation(text) {
+  let pos = 0, neg = 0;
+  MOTIVATION_KEYWORDS.positive.forEach(kw => {
+    const m = text.match(new RegExp(escapeRegExp(kw), "g"));
+    if (m) pos += m.length;
+  });
+  MOTIVATION_KEYWORDS.negative.forEach(kw => {
+    const m = text.match(new RegExp(escapeRegExp(kw), "g"));
+    if (m) neg += m.length;
+  });
+  if (pos === 0 && neg === 0) return "やりたさに関する記述は明示的にはありません。";
+  if (pos > neg * 2) return `🟢 やりたさが強く現れた日（ポジティブ表現 ${pos}件 / ネガティブ ${neg}件）。子どもの主体的な関与が観察されています。`;
+  if (neg > pos * 2) return `🔴 やりたさが弱まる場面が目立つ日（ネガティブ ${neg}件 / ポジティブ ${pos}件）。疲労や倦怠への対応が課題。`;
+  return `🟡 動機の波がある日（ポジティブ ${pos}件 / ネガティブ ${neg}件）。場面によって動機の起伏が見られます。`;
+}
+
+/* === 自己調整の自動推定 === */
+function autoDetectSelfRegulation(text) {
+  const counts = {};
+  Object.entries(SELF_REGULATION_TYPES).forEach(([type, keywords]) => {
+    let n = 0;
+    keywords.forEach(kw => {
+      const m = text.match(new RegExp(escapeRegExp(kw), "g"));
+      if (m) n += m.length;
+    });
+    counts[type] = n;
+  });
+  const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).filter(([t, n]) => n > 0);
+  if (sorted.length === 0) return "自己調整に関する明示的な記述は見られません。";
+  return `観察された自己調整： ${sorted.map(([t, n]) => `${t}（${n}件）`).join(" / ")}`;
+}
+
+/* === 移行の自動推定 === */
+function autoDetectTransition(text) {
+  const triggers = [];
+  if (/けテぶれ|大分析|プラスレ|＋れ/.test(text)) triggers.push("けテぶれの仕組み");
+  if (/心マトリクス|月ゾーン|太陽|お花畑/.test(text)) triggers.push("心マトリクスでの状態認識");
+  if (/問いかけ|どう思う|なぜ|考えて/.test(text)) triggers.push("教師の問いかけ");
+  if (/任せ|信頼|不在|我慢/.test(text)) triggers.push("教師の不介入・委ねる姿勢");
+  if (/価値づけ|承認|褒め|ありがとう|嬉しい/.test(text)) triggers.push("プロセスへの承認");
+  if (/友達|声かけ合|お互い|協働/.test(text)) triggers.push("仲間との関係");
+  if (triggers.length === 0) return "明示的な移行ポイントは検出されませんでした。";
+  return `移行を支えた要因（推定）： ${triggers.join(" / ")}`;
+}
+
+/* === 教師の関わりの自動推定 === */
+function autoDetectIntervention(text) {
+  const counts = {};
+  Object.entries(TEACHER_INTERVENTION_TYPES).forEach(([type, keywords]) => {
+    let n = 0;
+    keywords.forEach(kw => {
+      const m = text.match(new RegExp(escapeRegExp(kw), "g"));
+      if (m) n += m.length;
+    });
+    counts[type] = n;
+  });
+  const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).filter(([t, n]) => n > 0);
+  if (sorted.length === 0) return "教師の関わりに関する明示的な記述はありません。";
+  return `観察された教師の関わり： ${sorted.map(([t, n]) => `${t}（${n}件）`).join(" / ")}`;
+}
+
 /* 詳細テキストの簡易マークダウン整形 */
 function formatDetailText(text) {
   // 先にエスケープ → 後でマーカーを置換
@@ -1666,12 +1766,15 @@ function renderDayDetail(card) {
       </div>
     </div>
 
-    <!-- 分析データを先に表示（detail があれば「詳しく見る」ボタン付き） -->
+    <!-- 基本の分析セクション -->
     ${renderSection("よかったところ", data.good, data.good_detail, `${data.date}-good`)}
     ${renderSection("改善点", data.improve, data.improve_detail, `${data.date}-improve`)}
     ${renderSection("成長の記録", data.growth, data.growth_detail, `${data.date}-growth`)}
     ${renderSection("自立した学習者との関連", data.independence, data.independence_detail, `${data.date}-independence`)}
     ${renderSection("次回への課題", data.next, data.next_detail, `${data.date}-next`)}
+
+    <!-- ★ 動機×自己調整の研究視点による分析 -->
+    ${renderResearchLensBlock(data)}
 
     <!-- 写真は分析データの後ろ -->
     ${renderPhotoSection(selectedDate, photos)}
@@ -2068,6 +2171,28 @@ const AUTONOMY_AXES = {
   "協働": ["協働", "太陽", "友達に聞く", "声かけ合", "ペア", "助け合い", "信じて思いやる", "話しやすい"]
 };
 
+/* ★ 動機（やりたさ）のキーワード */
+const MOTIVATION_KEYWORDS = {
+  positive: ["興味", "関心", "嬉しい", "面白い", "夢中", "わくわく", "やりたい", "挑戦", "もっと", "頑張ろう", "意欲", "楽しい", "好き", "感動"],
+  negative: ["嫌", "面倒", "疲れ", "ふわふわ", "やりたくない", "つまらない", "退屈", "だるい", "やる気がない"]
+};
+
+/* ★ 自己調整の4タイプ */
+const SELF_REGULATION_TYPES = {
+  "やりたくないが取り組む": ["わからない", "助けを求め", "苦手", "難しい", "聞きに来", "頑張って", "それでも", "苦手な子"],
+  "試行錯誤": ["試行錯誤", "やってみる", "試す", "工夫", "失敗", "もう一度", "違うやり方", "改善", "考え直"],
+  "目標・方法の調整": ["計画", "けテぶれ", "プラスレ", "＋れ", "目標", "選ぶ", "決める", "ペース", "自分で考え", "大分析"],
+  "感情を乗り越える": ["心マトリクス", "ふわふわ", "落ち着", "我慢", "嘘をつかない", "誠実", "向き合", "コントロール"]
+};
+
+/* ★ 教師の関わりの4類型 */
+const TEACHER_INTERVENTION_TYPES = {
+  "問いかけ": ["どう思う", "なぜ", "どうすれば", "問い", "考えて", "問いかけ", "聞いてみ", "確認"],
+  "待つ・任せる": ["任せ", "待つ", "我慢", "声かけ前", "不在", "教えない", "見守", "信頼", "信じ"],
+  "評価・承認": ["褒め", "ありがとう", "嬉しい", "すごい", "認め", "価値づけ", "承認", "学級通信"],
+  "環境設計": ["けテぶれ", "心マトリクス", "掲示", "学級通信", "プラスレ", "＋れ", "QNKS", "ルール", "仕組み", "プロトコル"]
+};
+
 /* 指導の傾向テーマ（improve/next から検出） */
 const PEDAGOGY_THEMES = {
   "教師の発話量管理": ["話しすぎ", "発話量", "語り", "教えすぎ", "発話を", "短く"],
@@ -2148,13 +2273,16 @@ function renderRangeDetail(card, range, label) {
   // ⑦ 自立を支えたキーフレーズ
   const keywordBlock = renderKeywordSection(items);
 
-  // ⑧ 改善サイクル分析（半年/年のみ）
+  // ⑧ ★ 動機×自己調整の研究分析
+  const researchBlock = renderResearchAnalysis(items);
+
+  // ⑨ 改善サイクル分析（半年/年のみ）
   let trendBlock = "";
   if (currentPeriod === "half" || currentPeriod === "year") {
     trendBlock = renderLongTermTrend(items, label);
   }
 
-  // ⑨ エントリ一覧（既存）
+  // ⑩ エントリ一覧（既存）
   const entries = items.map(d => {
     const photos = getPhotosForDate(d.date);
     const photoStrip = photos.length > 0
@@ -2178,7 +2306,142 @@ function renderRangeDetail(card, range, label) {
     </div>`;
 
   card.innerHTML = header + summary + narrativeBlock + autonomyChartBlock
-    + highlightsBlock + fbChartBlock + pedagogyBlock + keywordBlock + trendBlock + entryListBlock;
+    + highlightsBlock + fbChartBlock + pedagogyBlock + keywordBlock
+    + researchBlock + trendBlock + entryListBlock;
+}
+
+/* === ★ 期間の動機×自己調整 研究分析ブロック === */
+function renderResearchAnalysis(items) {
+  // 動機の波（ポジ/ネガ）
+  let totalPos = 0, totalNeg = 0;
+  // 自己調整の4タイプ
+  const srCounts = {};
+  Object.keys(SELF_REGULATION_TYPES).forEach(t => srCounts[t] = 0);
+  // 教師の関わり4類型
+  const tiCounts = {};
+  Object.keys(TEACHER_INTERVENTION_TYPES).forEach(t => tiCounts[t] = 0);
+
+  items.forEach(d => {
+    const text = [
+      d.good, d.improve, d.growth, d.independence, d.next,
+      d.good_detail, d.improve_detail, d.growth_detail,
+      d.independence_detail, d.next_detail
+    ].filter(Boolean).join(" ");
+
+    MOTIVATION_KEYWORDS.positive.forEach(kw => {
+      const m = text.match(new RegExp(escapeRegExp(kw), "g"));
+      if (m) totalPos += m.length;
+    });
+    MOTIVATION_KEYWORDS.negative.forEach(kw => {
+      const m = text.match(new RegExp(escapeRegExp(kw), "g"));
+      if (m) totalNeg += m.length;
+    });
+    Object.entries(SELF_REGULATION_TYPES).forEach(([type, keywords]) => {
+      keywords.forEach(kw => {
+        const m = text.match(new RegExp(escapeRegExp(kw), "g"));
+        if (m) srCounts[type] += m.length;
+      });
+    });
+    Object.entries(TEACHER_INTERVENTION_TYPES).forEach(([type, keywords]) => {
+      keywords.forEach(kw => {
+        const m = text.match(new RegExp(escapeRegExp(kw), "g"));
+        if (m) tiCounts[type] += m.length;
+      });
+    });
+  });
+
+  // 動機波の評価
+  const motivationTotal = totalPos + totalNeg;
+  let motivationMsg;
+  if (motivationTotal === 0) {
+    motivationMsg = "動機に関する記述は明示的にはありません。";
+  } else {
+    const posRate = Math.round((totalPos / motivationTotal) * 100);
+    motivationMsg = `この期間の動機表現は、ポジティブ <strong>${totalPos}件</strong>（${posRate}%）／ネガティブ <strong>${totalNeg}件</strong>（${100 - posRate}%）。`;
+    if (posRate >= 70) motivationMsg += " <strong>やりたさが優勢な期間</strong>です。";
+    else if (posRate >= 40) motivationMsg += " 動機の<strong>波がある期間</strong>です。";
+    else motivationMsg += " <strong>やりたさが弱まりがちな期間</strong>。教師の介入と仕組みでの支えが鍵。";
+  }
+
+  // 自己調整4タイプ チャート
+  const srMax = Math.max(...Object.values(srCounts), 1);
+  const srBars = Object.entries(SELF_REGULATION_TYPES).map(([type]) => {
+    const v = srCounts[type];
+    const ratio = (v / srMax) * 100;
+    return `
+      <div class="chart-bar-row">
+        <div class="chart-bar-label" style="min-width:160px;">${type}</div>
+        <div class="chart-bar-track">
+          <div class="chart-bar-fill" style="width:${ratio}%; background:linear-gradient(90deg, #8e44ad, #9b59b6);"></div>
+        </div>
+        <div class="chart-bar-value">${v}件</div>
+      </div>`;
+  }).join("");
+
+  // 教師関わり4類型 チャート
+  const tiMax = Math.max(...Object.values(tiCounts), 1);
+  const tiBars = Object.entries(TEACHER_INTERVENTION_TYPES).map(([type]) => {
+    const v = tiCounts[type];
+    const ratio = (v / tiMax) * 100;
+    return `
+      <div class="chart-bar-row">
+        <div class="chart-bar-label" style="min-width:160px;">${type}</div>
+        <div class="chart-bar-track">
+          <div class="chart-bar-fill" style="width:${ratio}%; background:linear-gradient(90deg, #16a085, #1abc9c);"></div>
+        </div>
+        <div class="chart-bar-value">${v}件</div>
+      </div>`;
+  }).join("");
+
+  // 自己調整・教師関わりの強い軸の特定
+  const strongestSR = Object.entries(srCounts).sort((a, b) => b[1] - a[1])[0];
+  const weakestSR = Object.entries(srCounts).sort((a, b) => a[1] - b[1])[0];
+  const strongestTI = Object.entries(tiCounts).sort((a, b) => b[1] - a[1])[0];
+
+  // 仮説的考察
+  let hypothesisMsg = "";
+  if (strongestSR && strongestSR[1] > 0) {
+    hypothesisMsg += `<div class="highlight-item">🎯 <strong>最も観察された自己調整：</strong>${strongestSR[0]}（${strongestSR[1]}件）</div>`;
+  }
+  if (weakestSR && weakestSR[1] === 0 && srCounts !== {}) {
+    hypothesisMsg += `<div class="highlight-item">⚠️ <strong>育成余地：</strong>「${weakestSR[0]}」の場面が記録されていません</div>`;
+  }
+  if (strongestTI && strongestTI[1] > 0) {
+    hypothesisMsg += `<div class="highlight-item">👨‍🏫 <strong>教師の主な関わり：</strong>${strongestTI[0]}（${strongestTI[1]}件）が中心</div>`;
+  }
+  if (totalPos > 0 && srCounts["やりたくないが取り組む"] > 0) {
+    hypothesisMsg += `<div class="highlight-item">💡 <strong>仮説：</strong>やりたさだけでなく「やりたくないが取り組む」場面も記録されており、<em>動機に依存しない学びの土台</em>が形成されつつある</div>`;
+  }
+
+  return `
+    <div style="margin-top:24px; padding-top:16px; border-top:2px dashed #d4dffc;">
+      <div style="text-align:center; color:#667eea; font-weight:700; font-size:0.85em; margin-bottom:12px; letter-spacing:1px;">
+        🔬 動機 × 自己調整の研究視点
+      </div>
+
+      <div class="section">
+        <div class="section-title">🌊 動機（やりたさ）の波</div>
+        <div class="narrative-summary">${motivationMsg}</div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">🎯 自己調整の4タイプ分布</div>
+        <div class="period-chart">${srBars}</div>
+        <p style="font-size:0.78em; color:#95a5a6; margin-top:8px;">※「やりたくないが取り組む」「試行錯誤」「目標・方法の調整」「感情を乗り越える」の4観点</p>
+      </div>
+
+      <div class="section">
+        <div class="section-title">👨‍🏫 教師の関わり4類型</div>
+        <div class="period-chart">${tiBars}</div>
+        <p style="font-size:0.78em; color:#95a5a6; margin-top:8px;">※「問いかけ」「待つ・任せる」「評価・承認」「環境設計」のバランス</p>
+      </div>
+
+      ${hypothesisMsg ? `
+        <div class="section">
+          <div class="section-title">💭 期間内の仮説と所見</div>
+          <div class="highlight-box">${hypothesisMsg}</div>
+        </div>` : ""}
+    </div>`;
 }
 
 /* === 自立3軸の言及をカウント === */
