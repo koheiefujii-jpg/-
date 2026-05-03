@@ -890,7 +890,16 @@ const ANALYSIS_DATA = [
 ];
 
 /* 写真のカテゴリ */
-const PHOTO_CATEGORIES = ["板書", "ノート", "掲示物", "プリント", "教室", "その他"];
+const PHOTO_CATEGORIES = [
+  "板書",
+  "宿題ノート",
+  "算数ノート",
+  "国語ノート",
+  "体育プリント",
+  "掲示物",
+  "教室",
+  "その他"
+];
 
 /* localStorage キー（ユーザーがアップロードした写真用） */
 const PHOTO_STORAGE_KEY = "classroom_dashboard_photos_v1";
@@ -1269,8 +1278,14 @@ function renderDayDetail(card) {
 
 /* ===== 写真セクションのHTML ===== */
 function renderPhotoSection(dateStr, photos) {
-  // カテゴリタブ
-  const categories = ["すべて", ...PHOTO_CATEGORIES];
+  // カテゴリタブ（旧カテゴリの写真があれば末尾に追加して互換性確保）
+  const extraCategories = [];
+  photos.forEach(p => {
+    if (p.category && !PHOTO_CATEGORIES.includes(p.category) && !extraCategories.includes(p.category)) {
+      extraCategories.push(p.category);
+    }
+  });
+  const categories = ["すべて", ...PHOTO_CATEGORIES, ...extraCategories];
   const categoryTabs = categories.map(cat => {
     const count = cat === "すべて" ? photos.length : photos.filter(p => p.category === cat).length;
     if (cat !== "すべて" && count === 0) return ""; // 0件のカテゴリは非表示
@@ -1471,11 +1486,16 @@ function showCategoryPicker() {
 function getCategoryEmoji(cat) {
   const map = {
     "板書": "📋",
-    "ノート": "📓",
+    "宿題ノート": "📔",
+    "算数ノート": "🔢",
+    "国語ノート": "📖",
+    "体育プリント": "🏃",
     "掲示物": "🖼️",
-    "プリント": "📄",
     "教室": "🏫",
-    "その他": "📷"
+    "その他": "📷",
+    // 旧カテゴリ（既存写真の互換性のため）
+    "ノート": "📓",
+    "プリント": "📄"
   };
   return map[cat] || "📷";
 }
