@@ -634,6 +634,108 @@
   .stat-label { font-size: 0.8em; color: #7f8c8d; margin-bottom: 4px; }
   .stat-value { font-size: 1.6em; font-weight: 700; color: #2c3e50; }
 
+  /* タップ可能な統計カード */
+  .stat-card-clickable {
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+  .stat-card-clickable:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+  }
+  .stat-card-clickable::after {
+    content: "▼ タップで詳細";
+    display: block;
+    font-size: 0.7em;
+    color: #95a5a6;
+    margin-top: 4px;
+  }
+  .stat-card-clickable.active {
+    border-left-color: #f39c12;
+    background: linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%);
+    box-shadow: 0 4px 12px rgba(243, 156, 18, 0.3);
+  }
+  .stat-card-clickable.active::after {
+    content: "▲ 閉じる";
+    color: #d35400;
+    font-weight: 700;
+  }
+
+  /* タップ可能なチャートバー */
+  .chart-bar-row.clickable {
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 6px;
+    transition: background 0.15s;
+  }
+  .chart-bar-row.clickable:hover {
+    background: #f5f7fa;
+  }
+  .chart-bar-row.clickable.active {
+    background: #fff8e1;
+  }
+
+  /* ドリルダウン詳細パネル */
+  .drill-detail {
+    background: white;
+    border: 2px solid #f39c12;
+    border-radius: 10px;
+    padding: 16px;
+    margin: 8px 0 16px;
+    animation: drillDownFadeIn 0.25s ease;
+  }
+  @keyframes drillDownFadeIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .drill-title {
+    font-weight: 700;
+    color: #d35400;
+    margin-bottom: 12px;
+    font-size: 1em;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .drill-empty {
+    color: #95a5a6;
+    text-align: center;
+    padding: 16px;
+    font-style: italic;
+  }
+  .drill-date-block {
+    margin-bottom: 14px;
+  }
+  .drill-date {
+    font-weight: 700;
+    color: #667eea;
+    font-size: 0.85em;
+    margin-bottom: 6px;
+  }
+  .drill-quotes {
+    list-style: none;
+    padding-left: 0;
+  }
+  .drill-quotes li {
+    padding: 8px 12px;
+    background: #f9fafc;
+    border-left: 3px solid #c8d0db;
+    border-radius: 0 6px 6px 0;
+    margin: 6px 0;
+    font-size: 0.88em;
+    line-height: 1.7;
+    color: #2c3e50;
+  }
+  .drill-quotes li strong { color: #5568d3; }
+  .drill-quotes li em {
+    background: #fff8e1;
+    color: #d35400;
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-style: normal;
+  }
+
   .entry-list { display: flex; flex-direction: column; gap: 12px; }
   .entry-item {
     background: #f9fafc;
@@ -2145,6 +2247,8 @@ let activeCategory = "すべて";
 let photosExpanded = false;     // 写真ギャラリーの展開状態
 const PHOTOS_INITIAL_LIMIT = 4; // 初期表示枚数
 let expandedSections = new Set(); // 詳細展開しているセクションのID
+let expandedDrillDown = null;     // 期間ビューでタップして展開中の統計 {type, key}
+let currentRangeItems = null;     // ドリルダウンで参照する現在の期間アイテム
 
 /* セクションをHTMLに変換するヘルパー
    - detail があればトグルボタンを表示
@@ -2499,6 +2603,7 @@ function renderCalendar() {
       activeCategory = "すべて";
       photosExpanded = false;
       expandedSections = new Set();
+      expandedDrillDown = null;
       renderCalendar();
       renderDetail();
     });
@@ -2530,6 +2635,26 @@ function renderDetail() {
     case "half":  renderRangeDetail(card, getHalfRange(selectedDate), "半年"); break;
     case "year":  renderRangeDetail(card, getYearRange(selectedDate), "年間"); break;
   }
+
+  // ドリルダウン要素のクリックハンドラを毎回バインド
+  bindDrillDownEvents();
+}
+
+/* ドリルダウン要素のクリック */
+function bindDrillDownEvents() {
+  document.querySelectorAll("[data-drill-type]").forEach(el => {
+    el.addEventListener("click", () => {
+      const type = el.dataset.drillType;
+      const key = el.dataset.drillKey;
+      // 既に開いていたら閉じる、違うものを開いていたら切り替え
+      if (expandedDrillDown && expandedDrillDown.type === type && expandedDrillDown.key === key) {
+        expandedDrillDown = null;
+      } else {
+        expandedDrillDown = { type, key };
+      }
+      renderDetail();
+    });
+  });
 }
 
 /* ===== 単日表示 ===== */
@@ -3002,8 +3127,135 @@ const PEDAGOGY_THEMES = {
   "教師の自己ケア": ["休養", "消耗", "持続可能", "回復", "セルフケア"]
 };
 
+/* ============================================================
+   ★ ドリルダウン：統計カード/チャートバーから具体例を抽出
+   ============================================================ */
+
+const POSITIVE_FB_PHRASES = [
+  "褒め", "ありがとう", "嬉しい", "すごい", "素敵", "誇れる", "感動",
+  "頼もしい", "立派", "感心", "拍手", "認め", "称賛", "価値づけ",
+  "めちゃくちゃ", "本当に", "やっぱ"
+];
+
+const FB_FIELDS = [
+  "good", "good_detail", "growth_detail",
+  "teacher_intervention", "teacher_intervention_detail"
+];
+
+const AUTONOMY_FIELDS = [
+  "independence", "independence_detail",
+  "growth", "growth_detail", "good_detail",
+  "self_regulation", "self_regulation_detail"
+];
+
+/* 文章を文単位に分割し、指定キーワードを含む文を抽出 */
+function extractQuotesContaining(items, keywords, fieldNames) {
+  const seen = new Set();
+  const results = [];
+  items.forEach(d => {
+    fieldNames.forEach(field => {
+      const text = d[field];
+      if (!text) return;
+      // 「。」「\n」で分割
+      const sentences = String(text).split(/(?<=。)|\n+/);
+      sentences.forEach(s => {
+        const trimmed = s.trim().replace(/^[-・*\s]+/, "");
+        if (trimmed.length < 8 || trimmed.length > 240) return;
+        if (keywords.some(kw => trimmed.includes(kw))) {
+          const key = d.date + ":" + trimmed.substring(0, 40);
+          if (!seen.has(key)) {
+            seen.add(key);
+            results.push({ date: d.date, quote: trimmed });
+          }
+        }
+      });
+    });
+  });
+  return results;
+}
+
+/* ドリルダウンの詳細パネルを描画 */
+function renderDrillDownPanel(items) {
+  if (!expandedDrillDown) return "";
+  const { type, key } = expandedDrillDown;
+
+  let title = "";
+  let quotes = [];
+
+  if (type === "stat" && key === "positive") {
+    title = "💬 肯定発言・承認の具体例";
+    quotes = extractQuotesContaining(items, POSITIVE_FB_PHRASES, FB_FIELDS);
+  } else if (type === "stat" && key === "autonomy") {
+    title = "🌱 自立場面の具体例";
+    const allKW = Object.values(AUTONOMY_AXES).flat();
+    quotes = extractQuotesContaining(items, allKW, AUTONOMY_FIELDS);
+  } else if (type === "stat" && key === "days") {
+    title = "📅 分析記録のあった日";
+    quotes = items.map(d => ({
+      date: d.date,
+      quote: (d.good || "").substring(0, 80) + "..."
+    }));
+  } else if (type === "stat" && key === "avgFB") {
+    title = "⭐ 各日の肯定発言数";
+    quotes = items.map(d => ({
+      date: d.date,
+      quote: `肯定発言：**${d.positive_count || 0}回** ／ ${(d.good || "").substring(0, 60)}...`
+    }));
+  } else if (type === "autonomy") {
+    // 自立3軸のいずれかをクリック
+    title = `🎯 「${key}」が観察された場面`;
+    quotes = extractQuotesContaining(items, AUTONOMY_AXES[key] || [], AUTONOMY_FIELDS);
+  } else if (type === "selfreg") {
+    title = `🔄 「${key}」の場面`;
+    quotes = extractQuotesContaining(items, SELF_REGULATION_TYPES[key] || [], [
+      "good", "good_detail", "growth_detail", "self_regulation", "self_regulation_detail",
+      "transition", "transition_detail"
+    ]);
+  } else if (type === "intervention") {
+    title = `👨‍🏫 「${key}」の関わり`;
+    quotes = extractQuotesContaining(items, TEACHER_INTERVENTION_TYPES[key] || [], [
+      "good", "good_detail", "improve", "improve_detail",
+      "teacher_intervention", "teacher_intervention_detail",
+      "transition", "transition_detail"
+    ]);
+  } else if (type === "pedagogy") {
+    title = `🎓 「${key}」に関する記述`;
+    quotes = extractQuotesContaining(items, PEDAGOGY_THEMES[key] || [], [
+      "improve", "improve_detail", "next", "next_detail"
+    ]);
+  }
+
+  if (quotes.length === 0) {
+    return `<div class="drill-detail"><div class="drill-title">${title}</div><div class="drill-empty">具体的な記述が見つかりませんでした</div></div>`;
+  }
+
+  // 日付ごとにグループ化
+  const byDate = {};
+  quotes.forEach(q => {
+    if (!byDate[q.date]) byDate[q.date] = [];
+    byDate[q.date].push(q.quote);
+  });
+
+  const blocks = Object.entries(byDate).map(([date, qs]) => `
+    <div class="drill-date-block">
+      <div class="drill-date">${formatDateJP(date)}（${qs.length}件）</div>
+      <ul class="drill-quotes">
+        ${qs.map(q => `<li>${formatDetailText(q)}</li>`).join("")}
+      </ul>
+    </div>
+  `).join("");
+
+  return `
+    <div class="drill-detail">
+      <div class="drill-title">${title}（合計${quotes.length}件）</div>
+      ${blocks}
+    </div>
+  `;
+}
+
 function renderRangeDetail(card, range, label) {
   const items = getDataInRange(range.start, range.end);
+  currentRangeItems = items;  // ドリルダウン用に保持
   const totalPositive = items.reduce((sum, d) => sum + (d.positive_count || 0), 0);
   const avgFB = items.length > 0 ? Math.round(totalPositive / items.length) : 0;
 
@@ -3030,28 +3282,32 @@ function renderRangeDetail(card, range, label) {
     return;
   }
 
-  // ① サマリ統計（自立育成にフォーカス）
+  // ① サマリ統計（自立育成にフォーカス）★ タップ可能
   const autonomyMentions = countAutonomyMentions(items);
   const totalAutonomy = autonomyMentions.total;
+  const isActive = (type, key) =>
+    expandedDrillDown && expandedDrillDown.type === type && expandedDrillDown.key === key;
+
   const summary = `
     <div class="summary-grid">
-      <div class="stat-card">
+      <div class="stat-card stat-card-clickable ${isActive('stat','days')?'active':''}" data-drill-type="stat" data-drill-key="days">
         <div class="stat-label">分析日数</div>
         <div class="stat-value">${items.length}日</div>
       </div>
-      <div class="stat-card">
+      <div class="stat-card stat-card-clickable ${isActive('stat','positive')?'active':''}" data-drill-type="stat" data-drill-key="positive">
         <div class="stat-label">肯定発言合計</div>
         <div class="stat-value">${totalPositive}回</div>
       </div>
-      <div class="stat-card">
+      <div class="stat-card stat-card-clickable ${isActive('stat','avgFB')?'active':''}" data-drill-type="stat" data-drill-key="avgFB">
         <div class="stat-label">1日平均FB</div>
         <div class="stat-value">${avgFB}回</div>
       </div>
-      <div class="stat-card">
+      <div class="stat-card stat-card-clickable ${isActive('stat','autonomy')?'active':''}" data-drill-type="stat" data-drill-key="autonomy">
         <div class="stat-label">自立場面の言及</div>
         <div class="stat-value">${totalAutonomy}件</div>
       </div>
-    </div>`;
+    </div>
+    ${expandedDrillDown && expandedDrillDown.type === 'stat' ? renderDrillDownPanel(items) : ""}`;
 
   // ② ナラティブサマリ（自立育成の文脈）
   const narrativeBlock = renderNarrativeSummary(items, label, totalPositive, avgFB, autonomyMentions);
@@ -3161,13 +3417,17 @@ function renderResearchAnalysis(items) {
     else motivationMsg += " <strong>やりたさが弱まりがちな期間</strong>。教師の介入と仕組みでの支えが鍵。";
   }
 
-  // 自己調整4タイプ チャート
+  const isActiveDrill = (type, key) =>
+    expandedDrillDown && expandedDrillDown.type === type && expandedDrillDown.key === key;
+
+  // 自己調整4タイプ チャート（タップ可能）
   const srMax = Math.max(...Object.values(srCounts), 1);
   const srBars = Object.entries(SELF_REGULATION_TYPES).map(([type]) => {
     const v = srCounts[type];
     const ratio = (v / srMax) * 100;
+    const cls = isActiveDrill("selfreg", type) ? "active" : "";
     return `
-      <div class="chart-bar-row">
+      <div class="chart-bar-row clickable ${cls}" data-drill-type="selfreg" data-drill-key="${type}">
         <div class="chart-bar-label" style="min-width:160px;">${type}</div>
         <div class="chart-bar-track">
           <div class="chart-bar-fill" style="width:${ratio}%; background:linear-gradient(90deg, #8e44ad, #9b59b6);"></div>
@@ -3175,14 +3435,17 @@ function renderResearchAnalysis(items) {
         <div class="chart-bar-value">${v}件</div>
       </div>`;
   }).join("");
+  const srDrill = (expandedDrillDown && expandedDrillDown.type === "selfreg")
+    ? renderDrillDownPanel(items) : "";
 
-  // 教師関わり4類型 チャート
+  // 教師関わり4類型 チャート（タップ可能）
   const tiMax = Math.max(...Object.values(tiCounts), 1);
   const tiBars = Object.entries(TEACHER_INTERVENTION_TYPES).map(([type]) => {
     const v = tiCounts[type];
     const ratio = (v / tiMax) * 100;
+    const cls = isActiveDrill("intervention", type) ? "active" : "";
     return `
-      <div class="chart-bar-row">
+      <div class="chart-bar-row clickable ${cls}" data-drill-type="intervention" data-drill-key="${type}">
         <div class="chart-bar-label" style="min-width:160px;">${type}</div>
         <div class="chart-bar-track">
           <div class="chart-bar-fill" style="width:${ratio}%; background:linear-gradient(90deg, #16a085, #1abc9c);"></div>
@@ -3190,6 +3453,8 @@ function renderResearchAnalysis(items) {
         <div class="chart-bar-value">${v}件</div>
       </div>`;
   }).join("");
+  const tiDrill = (expandedDrillDown && expandedDrillDown.type === "intervention")
+    ? renderDrillDownPanel(items) : "";
 
   // 自己調整・教師関わりの強い軸の特定
   const strongestSR = Object.entries(srCounts).sort((a, b) => b[1] - a[1])[0];
@@ -3225,13 +3490,15 @@ function renderResearchAnalysis(items) {
       <div class="section">
         <div class="section-title">🎯 自己調整の4タイプ分布</div>
         <div class="period-chart">${srBars}</div>
-        <p style="font-size:0.78em; color:#95a5a6; margin-top:8px;">※「やりたくないが取り組む」「試行錯誤」「目標・方法の調整」「感情を乗り越える」の4観点</p>
+        <p style="font-size:0.78em; color:#95a5a6; margin-top:8px;">※ バーをタップで具体例を表示</p>
+        ${srDrill}
       </div>
 
       <div class="section">
         <div class="section-title">👨‍🏫 教師の関わり4類型</div>
         <div class="period-chart">${tiBars}</div>
-        <p style="font-size:0.78em; color:#95a5a6; margin-top:8px;">※「問いかけ」「待つ・任せる」「評価・承認」「環境設計」のバランス</p>
+        <p style="font-size:0.78em; color:#95a5a6; margin-top:8px;">※ バーをタップで具体例を表示</p>
+        ${tiDrill}
       </div>
 
       ${hypothesisMsg ? `
@@ -3377,7 +3644,7 @@ function renderAutonomyHighlights(items) {
     </div>`;
 }
 
-/* === 自立3軸のバランスチャート === */
+/* === 自立3軸のバランスチャート（タップ可能） === */
 function renderAutonomyChart(autonomy) {
   const c = autonomy.counts;
   const max = Math.max(c["主体性"], c["自己調整"], c["協働"], 1);
@@ -3387,13 +3654,16 @@ function renderAutonomyChart(autonomy) {
     { name: "自己調整", emoji: "🔄", color: "#3498db" },
     { name: "協働", emoji: "🤝", color: "#27ae60" }
   ];
+  const isActive = (type, key) =>
+    expandedDrillDown && expandedDrillDown.type === type && expandedDrillDown.key === key;
 
   const bars = axisInfo.map(({ name, emoji, color }) => {
     const value = c[name];
     const ratio = (value / max) * 100;
     const dateCount = autonomy.dates[name].size;
+    const activeCls = isActive("autonomy", name) ? "active" : "";
     return `
-      <div class="chart-bar-row">
+      <div class="chart-bar-row clickable ${activeCls}" data-drill-type="autonomy" data-drill-key="${name}">
         <div class="chart-bar-label">${emoji} ${name}</div>
         <div class="chart-bar-track">
           <div class="chart-bar-fill" style="width:${ratio}%; background:linear-gradient(90deg, ${color}, ${color}cc);"></div>
@@ -3402,11 +3672,16 @@ function renderAutonomyChart(autonomy) {
       </div>`;
   }).join("");
 
+  const drillPanel = (expandedDrillDown && expandedDrillDown.type === "autonomy")
+    ? renderDrillDownPanel(currentRangeItems || [])
+    : "";
+
   return `
     <div class="section">
       <div class="section-title">🎯 「自立した学習者」3軸の育成バランス</div>
       <div class="period-chart">${bars}</div>
-      <p style="font-size:0.78em; color:#95a5a6; margin-top:8px;">※ 分析記述から「主体性／自己調整／協働」のキーワードを自動抽出</p>
+      <p style="font-size:0.78em; color:#95a5a6; margin-top:8px;">※ バーをタップで具体例を表示</p>
+      ${drillPanel}
     </div>`;
 }
 
@@ -3427,10 +3702,13 @@ function renderPedagogyAnalysis(items) {
   if (sorted.length === 0) return "";
 
   const max = sorted[0][1].size;
+  const isActive = (type, key) =>
+    expandedDrillDown && expandedDrillDown.type === type && expandedDrillDown.key === key;
   const bars = sorted.map(([theme, dates]) => {
     const ratio = (dates.size / max) * 100;
+    const activeCls = isActive("pedagogy", theme) ? "active" : "";
     return `
-      <div class="chart-bar-row">
+      <div class="chart-bar-row clickable ${activeCls}" data-drill-type="pedagogy" data-drill-key="${theme}">
         <div class="chart-bar-label" style="min-width:140px;">${theme}</div>
         <div class="chart-bar-track">
           <div class="chart-bar-fill" style="width:${ratio}%; background:linear-gradient(90deg, #f39c12, #e67e22);"></div>
@@ -3439,11 +3717,15 @@ function renderPedagogyAnalysis(items) {
       </div>`;
   }).join("");
 
+  const drillPanel = (expandedDrillDown && expandedDrillDown.type === "pedagogy")
+    ? renderDrillDownPanel(items) : "";
+
   return `
     <div class="section">
       <div class="section-title">🎓 指導の重点テーマ（改善点・次回課題から抽出）</div>
       <div class="period-chart">${bars}</div>
-      <p style="font-size:0.78em; color:#95a5a6; margin-top:8px;">※ 繰り返し登場するテーマは、教師自身が自覚している継続課題を示します</p>
+      <p style="font-size:0.78em; color:#95a5a6; margin-top:8px;">※ バーをタップで具体的な記述を表示</p>
+      ${drillPanel}
     </div>`;
 }
 
@@ -3631,6 +3913,7 @@ document.querySelectorAll(".period-btn").forEach(btn => {
     document.querySelectorAll(".period-btn").forEach(b => b.classList.remove("active"));
     btn.classList.add("active");
     currentPeriod = btn.dataset.period;
+    expandedDrillDown = null;  // 期間切替でリセット
     renderDetail();
   });
 });
