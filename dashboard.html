@@ -4620,15 +4620,20 @@ document.getElementById("closeManageImports").addEventListener("click", () => {
     console.error("ストレージ初期化失敗:", e);
   }
 
-  renderCalendar();
-  if (ANALYSIS_DATA.length > 0) {
-    const latest = ANALYSIS_DATA[ANALYSIS_DATA.length - 1];
-    selectedDate = latest.date;
-    const latestDate = new Date(latest.date);
-    currentDate = new Date(latestDate.getFullYear(), latestDate.getMonth(), 1);
-    renderCalendar();
-    renderDetail();
+  // 起動時：今日の日付の月を表示
+  const today = new Date();
+  currentDate = new Date(today.getFullYear(), today.getMonth(), 1);
+
+  // 今日のデータがあれば選択、なければ未選択（今日の月を表示するだけ）
+  const todayStr = formatDate(today);
+  if (getDataByDate(todayStr)) {
+    selectedDate = todayStr;
+  } else {
+    selectedDate = null;
   }
+
+  renderCalendar();
+  renderDetail();
 })();
 </script>
 </body>
