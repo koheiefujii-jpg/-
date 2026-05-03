@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>授業分析ダッシュボード</title>
+<style>
+  /* ============================
+     全体スタイル
+  ============================ */
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif;
+    background: #f4f6fa;
+    color: #2c3e50;
+    margin: 0;
+    padding: 24px;
+    line-height: 1.6;
+  }
+  h1 { margin: 0 0 16px; font-size: 22px; }
+  h2 { font-size: 18px; margin: 0 0 12px; color: #34495e; }
+  .container { max-width: 1080px; margin: 0 auto; }
+
+  /* ============================
+     期間切り替えボタン
+  ============================ */
+  .period-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+  .period-tabs button {
+    padding: 8px 16px;
+    border: 1px solid #cbd5e1;
+    background: #fff;
+    border-radius: 999px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.15s;
+  }
+  .period-tabs button:hover { background: #eef2ff; }
+  .period-tabs button.active {
+    background: #4f46e5;
+    color: #fff;
+    border-color: #4f46e5;
+  }
+
+  /* ============================
+     カレンダー
+  ============================ */
+  .calendar-card, .detail-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    margin-bottom: 20px;
+  }
+  .calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  .calendar-header button {
+    border: none;
+    background: #eef2ff;
+    color: #4f46e5;
+    padding: 6px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  .calendar-header button:hover { background: #e0e7ff; }
+  .calendar-title { font-weight: bold; font-size: 16px; }
+
+  .calendar {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+  }
+  .calendar .dow {
+    text-align: center;
+    font-size: 12px;
+    color: #64748b;
+    padding: 6px 0;
+    font-weight: bold;
+  }
+  .calendar .dow.sun { color: #ef4444; }
+  .calendar .dow.sat { color: #3b82f6; }
+
+  .day {
+    aspect-ratio: 1 / 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    background: #f8fafc;
+    color: #cbd5e1; /* データなし=薄い色 */
+    user-select: none;
+    transition: all 0.15s;
+    position: relative;
+  }
+  .day.empty { background: transparent; cursor: default; }
+  .day.has-data {
+    background: #c7d2fe; /* データあり=濃い色 */
+    color: #1e293b;
+    font-weight: bold;
+  }
+  .day.has-data:hover { background: #a5b4fc; }
+  .day.selected {
+    outline: 3px solid #4f46e5;
+    outline-offset: -3px;
+    background: #818cf8 !important;
+    color: #fff;
+  }
+  .day.in-range {
+    background: #e0e7ff;
+    color: #1e293b;
+  }
+  .day .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #4f46e5;
+    margin-top: 2px;
+  }
+  .day.has-data.selected .dot { background: #fff; }
+
+  /* ============================
+     詳細表示エリア
+  ============================ */
+  .detail-card .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: #eef2ff;
+    color: #4f46e5;
+    font-size: 13px;
+    font-weight: bold;
+  }
+  .badge.subject { background: #fef3c7; color: #b45309; }
+  .badge.cls     { background: #dcfce7; color: #15803d; }
+  .badge.count   { background: #fce7f3; color: #be185d; }
+
+  .section {
+    margin-bottom: 14px;
+    padding: 12px 14px;
+    background: #f8fafc;
+    border-left: 4px solid #4f46e5;
+    border-radius: 6px;
+  }
+  .section .label {
+    font-size: 12px;
+    color: #64748b;
+    font-weight: bold;
+    margin-bottom: 4px;
+  }
+  .section .value { white-space: pre-wrap; font-size: 14px; }
+  .section.good     { border-color: #10b981; }
+  .section.improve  { border-color: #f59e0b; }
+  .section.growth   { border-color: #3b82f6; }
+  .section.indep    { border-color: #8b5cf6; }
+  .section.next     { border-color: #ef4444; }
+
+  .empty-message {
+    text-align: center;
+    padding: 40px 20px;
+    color: #94a3b8;
+  }
+
+  /* ============================
+     まとめ表示（週・月・半年・年）
+  ============================ */
+  .summary-list { display: grid; gap: 12px; }
+  .summary-item {
+    background: #f8fafc;
+    padding: 12px 14px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+  }
+  .summary-item .head {
+    font-weight: bold;
+    margin-bottom: 6px;
+    color: #4f46e5;
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .stat {
+    background: #eef2ff;
+    padding: 12px;
+    border-radius: 8px;
+    text-align: center;
+  }
+  .stat .num { font-size: 22px; font-weight: bold; color: #4f46e5; }
+  .stat .lbl { font-size: 12px; color: #64748b; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>📊 授業分析ダッシュボード</h1>
+
+  <!-- 期間切り替え -->
+  <div class="period-tabs" id="periodTabs">
+    <button data-period="day"     class="active">日</button>
+    <button data-period="week">週</button>
+    <button data-period="month">月</button>
+    <button data-period="half">半年</button>
+    <button data-period="year">年間</button>
+  </div>
+
+  <!-- カレンダー -->
+  <div class="calendar-card">
+    <div class="calendar-header">
+      <button id="prevMonth">◀ 前月</button>
+      <div class="calendar-title" id="calendarTitle"></div>
+      <button id="nextMonth">翌月 ▶</button>
+    </div>
+    <div class="calendar" id="calendar"></div>
+  </div>
+
+  <!-- 詳細表示エリア -->
+  <div class="detail-card">
+    <h2 id="detailTitle">日付を選択してください</h2>
+    <div id="detailBody">
+      <div class="empty-message">カレンダーから日付を選んでください</div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ==========================================================
+   サンプルデータ
+   後から要素を追加するだけで OK
+   フォーマット:
+   {
+     date: "YYYY-MM-DD",
+     subject: 教科,
+     class: クラス,
+     good: よかったところ,
+     improve: 改善点,
+     growth: 成長の記録,
+     independence: 自立した学習者との関連,
+     next: 次回への課題,
+     positive_count: ポジティブフィードバック数
+   }
+========================================================== */
+const analysisData = [
+  {
+    date: "2026-04-15",
+    subject: "国語",
+    class: "6年4組",
+    good: "ケテブレを使って自分の学習計画を立てる児童が増えた。発表の声量も改善。",
+    improve: "話し合い活動で、特定の児童ばかりが発言する場面があった。",
+    growth: "Aさんが初めて全体の前で意見を発表できた。",
+    independence: "希望永続の『自分で選ぶ』要素が朝の活動で見られた。",
+    next: "発言機会の偏りを解消する仕組み作り。",
+    positive_count: 14
+  },
+  {
+    date: "2026-04-22",
+    subject: "算数",
+    class: "6年4組",
+    good: "既習事項を使って自力で解決する児童が多数。説明し合う場面も自然発生。",
+    improve: "板書の構造化が不十分で、後半混乱した児童がいた。",
+    growth: "Bさんが友達に教える役割を引き受けるようになった。",
+    independence: "シンマトリックスでの自己評価が定着しつつある。",
+    next: "板書計画の事前構造化を徹底する。",
+    positive_count: 21
+  },
+  {
+    date: "2026-05-02",
+    subject: "体育",
+    class: "6年4組",
+    good: "跳び箱の回転系で、安全確認を子ども同士で行えた。動きの分析も的確。",
+    improve: "技能差が大きく、待ち時間が発生した。場の工夫が必要。",
+    growth: "Cさんが補助役を率先して引き受け、リーダーシップを発揮。",
+    independence: "『大分析』の視点で動きを言語化できる児童が増加。",
+    next: "技能差別の場づくり、3コース展開を試す。",
+    positive_count: 18
+  },
+  {
+    date: "2026-05-07",
+    subject: "理科",
+    class: "6年4組",
+    good: "実験計画を子ども主導で立案。仮説の質が向上した。",
+    improve: "結果のまとめ方にばらつきがあり、共有が難しかった。",
+    growth: "Dさんが対立意見をまとめる役を担えた。",
+    independence: "試行錯誤と振り返り2軸の組み合わせが見られた。",
+    next: "結果共有のテンプレート作成。",
+    positive_count: 16
+  },
+  {
+    date: "2026-05-09",
+    subject: "社会",
+    class: "6年4組",
+    good: "資料の比較から自分の意見を述べる児童が複数。批判的思考の芽。",
+    improve: "個人作業に偏り、対話の時間が不足した。",
+    growth: "クラス全体の発言量が前月比で20%増加。",
+    independence: "希望永続の『自己決定』要素が話し合いに表れた。",
+    next: "対話パートを意図的に組み込む。",
+    positive_count: 22
+  },
+  {
+    date: "2026-05-12",
+    subject: "国語",
+    class: "6年4組",
+    good: "音読の表現が豊かになった。情景描写へのこだわりが見える。",
+    improve: "ノートのまとめ方の指導不足。",
+    growth: "Eさんが自分の苦手を友達に開示できた。",
+    independence: "ケテブレを朝の会で当番が紹介する仕組みが定着。",
+    next: "ノート指導の時間確保。",
+    positive_count: 19
+  }
+];
+
+/* ==========================================================
+   状態管理
+========================================================== */
+let currentMonth = new Date(); // 表示中の月
+currentMonth.setDate(1);
+let selectedDate = null;        // 選択中の日付（Date）
+let currentPeriod = "day";      // 現在の期間モード
+
+/* ==========================================================
+   ユーティリティ
+========================================================== */
+const fmt = d => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+};
+const findData = dateStr => analysisData.find(x => x.date === dateStr);
+const dataMap = () => {
+  const map = {};
+  analysisData.forEach(d => map[d.date] = d);
+  return map;
+};
+
+/* ==========================================================
+   カレンダー描画
+========================================================== */
+function renderCalendar() {
+  const cal = document.getElementById("calendar");
+  const title = document.getElementById("calendarTitle");
+  cal.innerHTML = "";
+
+  title.textContent = `${currentMonth.getFullYear()}年 ${currentMonth.getMonth() + 1}月`;
+
+  // 曜日ヘッダー
+  const dows = ["日", "月", "火", "水", "木", "金", "土"];
+  dows.forEach((d, i) => {
+    const el = document.createElement("div");
+    el.className = "dow";
+    if (i === 0) el.classList.add("sun");
+    if (i === 6) el.classList.add("sat");
+    el.textContent = d;
+    cal.appendChild(el);
+  });
+
+  // 月初めの曜日まで空白セル
+  const firstDay = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+  const startWeekday = firstDay.getDay();
+  for (let i = 0; i < startWeekday; i++) {
+    const empty = document.createElement("div");
+    empty.className = "day empty";
+    cal.appendChild(empty);
+  }
+
+  // 日付セル
+  const lastDay = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
+  const map = dataMap();
+  const rangeSet = getRangeDateSet(); // 期間ハイライト用
+
+  for (let day = 1; day <= lastDay; day++) {
+    const dateObj = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
+    const dateStr = fmt(dateObj);
+    const cell = document.createElement("div");
+    cell.className = "day";
+    cell.textContent = day;
+    cell.dataset.date = dateStr;
+
+    if (map[dateStr]) {
+      cell.classList.add("has-data");
+      const dot = document.createElement("span");
+      dot.className = "dot";
+      cell.appendChild(dot);
+    }
+
+    if (selectedDate && fmt(selectedDate) === dateStr) {
+      cell.classList.add("selected");
+    } else if (rangeSet.has(dateStr)) {
+      cell.classList.add("in-range");
+    }
+
+    cell.addEventListener("click", () => {
+      selectedDate = dateObj;
+      renderCalendar();
+      renderDetail();
+    });
+    cal.appendChild(cell);
+  }
+}
+
+/* ==========================================================
+   選択期間の日付セットを返す（ハイライト用）
+========================================================== */
+function getRangeDateSet() {
+  const set = new Set();
+  if (!selectedDate || currentPeriod === "day") return set;
+
+  const range = getDateRange(selectedDate, currentPeriod);
+  if (!range) return set;
+
+  const cur = new Date(range.start);
+  while (cur <= range.end) {
+    set.add(fmt(cur));
+    cur.setDate(cur.getDate() + 1);
+  }
+  return set;
+}
+
+/* ==========================================================
+   期間に対応する開始・終了日を返す
+========================================================== */
+function getDateRange(baseDate, period) {
+  const d = new Date(baseDate);
+  let start, end;
+  switch (period) {
+    case "week": {
+      // 日曜開始の週
+      const dow = d.getDay();
+      start = new Date(d); start.setDate(d.getDate() - dow);
+      end   = new Date(start); end.setDate(start.getDate() + 6);
+      break;
+    }
+    case "month": {
+      start = new Date(d.getFullYear(), d.getMonth(), 1);
+      end   = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+      break;
+    }
+    case "half": {
+      // 基準日から過去6ヶ月
+      end = new Date(d);
+      start = new Date(d); start.setMonth(d.getMonth() - 5); start.setDate(1);
+      break;
+    }
+    case "year": {
+      end = new Date(d);
+      start = new Date(d.getFullYear(), 0, 1);
+      break;
+    }
+    default: return null;
+  }
+  return { start, end };
+}
+
+/* ==========================================================
+   詳細・まとめ表示
+========================================================== */
+function renderDetail() {
+  const titleEl = document.getElementById("detailTitle");
+  const body    = document.getElementById("detailBody");
+
+  if (!selectedDate) {
+    titleEl.textContent = "日付を選択してください";
+    body.innerHTML = '<div class="empty-message">カレンダーから日付を選んでください</div>';
+    return;
+  }
+
+  if (currentPeriod === "day") {
+    renderDay(titleEl, body);
+  } else {
+    renderRangeSummary(titleEl, body);
+  }
+}
+
+/* --- 単日表示 --- */
+function renderDay(titleEl, body) {
+  const dateStr = fmt(selectedDate);
+  const data = findData(dateStr);
+
+  titleEl.textContent = `📅 ${dateStr} の分析`;
+
+  if (!data) {
+    body.innerHTML = '<div class="empty-message">この日のデータはありません</div>';
+    return;
+  }
+
+  body.innerHTML = `
+    <div class="meta">
+      <span class="badge subject">📘 ${data.subject}</span>
+      <span class="badge cls">👥 ${data.class}</span>
+      <span class="badge count">⭐ ポジティブ ${data.positive_count} 件</span>
+    </div>
+    <div class="section good">
+      <div class="label">✅ よかったところ</div>
+      <div class="value">${escapeHtml(data.good)}</div>
+    </div>
+    <div class="section improve">
+      <div class="label">⚠️ 改善点</div>
+      <div class="value">${escapeHtml(data.improve)}</div>
+    </div>
+    <div class="section growth">
+      <div class="label">🌱 成長の記録</div>
+      <div class="value">${escapeHtml(data.growth)}</div>
+    </div>
+    <div class="section indep">
+      <div class="label">🧭 自立した学習者との関連</div>
+      <div class="value">${escapeHtml(data.independence)}</div>
+    </div>
+    <div class="section next">
+      <div class="label">🎯 次回への課題</div>
+      <div class="value">${escapeHtml(data.next)}</div>
+    </div>
+  `;
+}
+
+/* --- 期間まとめ表示 --- */
+function renderRangeSummary(titleEl, body) {
+  const range = getDateRange(selectedDate, currentPeriod);
+  const items = analysisData.filter(d => {
+    const dt = new Date(d.date);
+    return dt >= range.start && dt <= range.end;
+  }).sort((a, b) => a.date.localeCompare(b.date));
+
+  const periodLabel = { week: "週", month: "月", half: "半年", year: "年間" }[currentPeriod];
+  titleEl.textContent = `📈 ${fmt(range.start)} 〜 ${fmt(range.end)} の${periodLabel}まとめ`;
+
+  if (items.length === 0) {
+    body.innerHTML = '<div class="empty-message">この期間のデータはありません</div>';
+    return;
+  }
+
+  // 統計
+  const totalPositive = items.reduce((s, x) => s + (x.positive_count || 0), 0);
+  const avgPositive   = (totalPositive / items.length).toFixed(1);
+  const subjects      = [...new Set(items.map(x => x.subject))];
+
+  let html = `
+    <div class="stats-grid">
+      <div class="stat"><div class="num">${items.length}</div><div class="lbl">記録した授業数</div></div>
+      <div class="stat"><div class="num">${totalPositive}</div><div class="lbl">ポジティブFB合計</div></div>
+      <div class="stat"><div class="num">${avgPositive}</div><div class="lbl">1回あたり平均</div></div>
+      <div class="stat"><div class="num">${subjects.length}</div><div class="lbl">教科数</div></div>
+    </div>
+  `;
+
+  // 半年・年間→傾向分析
+  if (currentPeriod === "half" || currentPeriod === "year") {
+    html += renderTrend(items);
+  }
+
+  // 各記録の概要リスト
+  html += '<h2 style="margin-top:20px;">記録一覧</h2><div class="summary-list">';
+  items.forEach(d => {
+    html += `
+      <div class="summary-item">
+        <div class="head">
+          <span>${d.date} / ${escapeHtml(d.subject)} / ${escapeHtml(d.class)}</span>
+          <span class="badge count">⭐ ${d.positive_count}</span>
+        </div>
+        <div><strong>よかった点：</strong>${escapeHtml(d.good)}</div>
+        <div><strong>次回課題：</strong>${escapeHtml(d.next)}</div>
+      </div>
+    `;
+  });
+  html += '</div>';
+  body.innerHTML = html;
+}
+
+/* --- 半年・年間用：傾向分析 --- */
+function renderTrend(items) {
+  // 教科ごとの集計
+  const subjectStats = {};
+  items.forEach(d => {
+    if (!subjectStats[d.subject]) subjectStats[d.subject] = { count: 0, positive: 0 };
+    subjectStats[d.subject].count++;
+    subjectStats[d.subject].positive += d.positive_count || 0;
+  });
+
+  const sorted = Object.entries(subjectStats).sort((a, b) => b[1].count - a[1].count);
+  const maxCount = Math.max(...sorted.map(([_, v]) => v.count));
+
+  let html = '<h2 style="margin-top:20px;">📊 傾向分析（教科別）</h2>';
+  html += '<div style="background:#f8fafc;padding:14px;border-radius:8px;">';
+  sorted.forEach(([sub, v]) => {
+    const ratio = (v.count / maxCount * 100).toFixed(0);
+    const avg   = (v.positive / v.count).toFixed(1);
+    html += `
+      <div style="margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;">
+          <span><strong>${escapeHtml(sub)}</strong> (${v.count}回 / 平均⭐${avg})</span>
+        </div>
+        <div style="background:#e2e8f0;border-radius:4px;height:10px;overflow:hidden;">
+          <div style="width:${ratio}%;background:#4f46e5;height:100%;"></div>
+        </div>
+      </div>
+    `;
+  });
+  html += '</div>';
+
+  // 月別推移
+  const monthly = {};
+  items.forEach(d => {
+    const ym = d.date.substring(0, 7);
+    if (!monthly[ym]) monthly[ym] = 0;
+    monthly[ym] += d.positive_count || 0;
+  });
+  const months = Object.keys(monthly).sort();
+  const maxPos = Math.max(...Object.values(monthly), 1);
+
+  html += '<h2 style="margin-top:20px;">📅 月別ポジティブFB推移</h2>';
+  html += '<div style="background:#f8fafc;padding:14px;border-radius:8px;display:flex;gap:8px;align-items:flex-end;height:160px;">';
+  months.forEach(m => {
+    const h = (monthly[m] / maxPos * 120).toFixed(0);
+    html += `
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">
+        <div style="font-size:11px;color:#64748b;">${monthly[m]}</div>
+        <div style="width:100%;background:#4f46e5;height:${h}px;border-radius:4px 4px 0 0;"></div>
+        <div style="font-size:11px;color:#64748b;">${m.substring(5)}月</div>
+      </div>
+    `;
+  });
+  html += '</div>';
+
+  return html;
+}
+
+/* ==========================================================
+   HTML エスケープ
+========================================================== */
+function escapeHtml(str) {
+  if (str == null) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+/* ==========================================================
+   イベント
+========================================================== */
+document.getElementById("prevMonth").addEventListener("click", () => {
+  currentMonth.setMonth(currentMonth.getMonth() - 1);
+  renderCalendar();
+});
+document.getElementById("nextMonth").addEventListener("click", () => {
+  currentMonth.setMonth(currentMonth.getMonth() + 1);
+  renderCalendar();
+});
+
+document.getElementById("periodTabs").addEventListener("click", e => {
+  if (e.target.tagName !== "BUTTON") return;
+  document.querySelectorAll("#periodTabs button").forEach(b => b.classList.remove("active"));
+  e.target.classList.add("active");
+  currentPeriod = e.target.dataset.period;
+  renderCalendar();
+  renderDetail();
+});
+
+/* ==========================================================
+   初期化：データがある最新の日付を選択
+========================================================== */
+(function init() {
+  if (analysisData.length > 0) {
+    const latest = analysisData
+      .map(d => d.date)
+      .sort()
+      .pop();
+    selectedDate = new Date(latest);
+    currentMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
+  }
+  renderCalendar();
+  renderDetail();
+})();
+</script>
+</body>
+</html>
