@@ -303,8 +303,15 @@
 
   .photo-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    gap: 10px;
+    /* スマホ縦は強制2列、タブレット以上は自動 */
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  @media (min-width: 600px) {
+    .photo-grid {
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 10px;
+    }
   }
   .photo-thumb {
     position: relative;
@@ -1025,7 +1032,7 @@ let selectedDate = null;
 let currentPeriod = "day";
 let activeCategory = "すべて";
 let photosExpanded = false;     // 写真ギャラリーの展開状態
-const PHOTOS_INITIAL_LIMIT = 6; // 初期表示枚数
+const PHOTOS_INITIAL_LIMIT = 4; // 初期表示枚数
 let pendingUpload = null; // {date, dataUrl, fileName}
 
 /* ============================================================
@@ -1311,8 +1318,7 @@ function renderDayDetail(card) {
       </div>
     </div>
 
-    ${renderPhotoSection(selectedDate, photos)}
-
+    <!-- 分析データを先に表示 -->
     <div class="section">
       <div class="section-title">よかったところ</div>
       <div class="section-content">${data.good}</div>
@@ -1337,6 +1343,9 @@ function renderDayDetail(card) {
       <div class="section-title">次回への課題</div>
       <div class="section-content">${data.next}</div>
     </div>
+
+    <!-- 写真は分析データの後ろ -->
+    ${renderPhotoSection(selectedDate, photos)}
   `;
   bindPhotoEvents();
 }
