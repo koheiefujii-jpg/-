@@ -988,15 +988,8 @@
 <div class="container">
 
   <header>
-    <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px;">
-      <div>
-        <h1>📊 授業分析ダッシュボード</h1>
-        <p>6年4組 / 自立した学習者育成プロジェクト</p>
-      </div>
-      <button id="dataMenuBtn" title="データの追加・出力" style="background:rgba(255,255,255,0.15); color:white; border:1px solid rgba(255,255,255,0.3); width:38px; height:38px; border-radius:50%; cursor:pointer; font-size:1.1em; line-height:1; display:flex; align-items:center; justify-content:center;">
-        ⋯
-      </button>
-    </div>
+    <h1>📊 授業分析ダッシュボード</h1>
+    <p>6年4組 / 自立した学習者育成プロジェクト</p>
   </header>
 
   <div class="period-selector">
@@ -4494,10 +4487,13 @@ tags:
 }
 
 /* === Obsidian連携モーダルのイベント === */
-document.getElementById("dataMenuBtn").addEventListener("click", () => {
+// データ管理メニューはUIから撤去済み。互換のためモーダルのDOMは残すが起動口はなし。
+const _dataMenuBtn = document.getElementById("dataMenuBtn");
+if (_dataMenuBtn) _dataMenuBtn.addEventListener("click", () => {
   document.getElementById("obsidianModal").classList.add("show");
 });
-document.getElementById("closeObsidianModal").addEventListener("click", () => {
+const _closeObsidianModal = document.getElementById("closeObsidianModal");
+if (_closeObsidianModal) _closeObsidianModal.addEventListener("click", () => {
   document.getElementById("obsidianModal").classList.remove("show");
 });
 
