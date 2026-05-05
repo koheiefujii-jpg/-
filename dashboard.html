@@ -446,6 +446,85 @@
     font-weight: 700;
     line-height: 1.2;
   }
+  /* クラウド同期済みバッジ */
+  .photo-cloud-badge {
+    position: absolute;
+    bottom: 6px;
+    right: 6px;
+    background: rgba(39, 174, 96, 0.92);
+    color: white;
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-size: 0.62em;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  /* クラウドアップロードボタン */
+  .photo-cloud-btn {
+    position: absolute;
+    top: 6px;
+    right: 36px;
+    background: rgba(52, 152, 219, 0.95);
+    color: white;
+    border: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75em;
+    z-index: 5;
+  }
+  .photo-cloud-btn.uploading {
+    background: rgba(243, 156, 18, 0.95);
+    display: flex;
+    animation: cloudSpin 1s linear infinite;
+  }
+  @keyframes cloudSpin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  .photo-thumb:hover .photo-cloud-btn { display: flex; }
+
+  /* 設定（歯車）ボタン */
+  .settings-btn {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: white;
+    border: 1px solid #e1e8ed;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    font-size: 1.2em;
+    color: #5a6c7d;
+    z-index: 50;
+    transition: all 0.2s;
+  }
+  .settings-btn:hover {
+    background: #f0f3f7;
+    transform: scale(1.05);
+  }
+  .settings-btn.unconfigured::after {
+    content: "!";
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    background: #e74c3c;
+    color: white;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    font-size: 0.7em;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
   .photo-delete-btn {
     position: absolute;
     top: 6px;
@@ -1157,6 +1236,60 @@
     </div>
     <div class="actions">
       <button class="btn-cancel" id="closeManageImports">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<!-- ⚙️ 設定（フローティングボタン） -->
+<button class="settings-btn" id="settingsBtn" title="設定">⚙️</button>
+
+<!-- 設定モーダル -->
+<div class="category-picker" id="settingsModal">
+  <div class="category-picker-card" style="max-width:480px;">
+    <h3>⚙️ 設定</h3>
+    <div class="category-picker-scroll">
+      <!-- GitHub PAT 設定 -->
+      <div style="background:#f5f7ff; border-radius:8px; padding:14px; margin-bottom:14px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <strong style="color:#2c3e50;">☁️ クラウド同期</strong>
+          <span id="patStatus" style="font-size:0.75em; padding:3px 10px; border-radius:10px; background:#fff3e0; color:#e65100; font-weight:700;">未設定</span>
+        </div>
+        <p style="font-size:0.82em; color:#5a6c7d; margin-bottom:10px; line-height:1.6;">
+          GitHubのPersonal Access Token（PAT）を設定すると、写真をクラウド保存して全デバイスで閲覧できます。
+        </p>
+        <input type="password" id="patInput" placeholder="ghp_... または github_pat_..." style="width:100%; padding:10px; border:1.5px solid #d4dffc; border-radius:6px; font-size:0.85em; font-family:'Menlo','Consolas',monospace; margin-bottom:8px;">
+        <div style="display:flex; gap:6px;">
+          <button id="savePat" style="flex:1; padding:8px; background:#27ae60; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.85em;">保存</button>
+          <button id="clearPat" style="padding:8px 14px; background:#ecf0f1; color:#5a6c7d; border:none; border-radius:6px; cursor:pointer; font-size:0.85em;">削除</button>
+        </div>
+      </div>
+
+      <!-- PAT発行ガイド -->
+      <details style="background:#fafbfc; border-radius:6px; padding:10px 12px; font-size:0.82em;">
+        <summary style="cursor:pointer; color:#667eea; font-weight:600;">📖 PATの発行手順</summary>
+        <div style="margin-top:10px; line-height:1.7; color:#34495e;">
+          <ol style="padding-left:20px;">
+            <li>iPhone Safari等で <a href="https://github.com/settings/tokens" target="_blank" style="color:#667eea;">github.com/settings/tokens</a> を開く</li>
+            <li>「<strong>Generate new token (classic)</strong>」をタップ</li>
+            <li>Note：<code>授業ダッシュボード</code> など分かる名前</li>
+            <li>Expiration：<strong>No expiration</strong> 推奨</li>
+            <li>Select scopes：<strong><code>repo</code></strong>（フル）にチェック</li>
+            <li>「Generate token」をタップ</li>
+            <li>表示された <code>ghp_xxxxxxxx...</code> を <strong>長押しコピー</strong></li>
+            <li>このダッシュボードに戻って、上の入力欄に貼り付け→保存</li>
+          </ol>
+          <div style="margin-top:8px; padding:8px; background:#fff8e1; border-left:3px solid #f39c12; border-radius:0 4px 4px 0;">
+            ⚠️ PATは<strong>そのデバイスのみ</strong>に保存されます。iPhoneとMacなど複数デバイスで使う場合、それぞれで設定してください。
+          </div>
+        </div>
+      </details>
+
+      <p style="font-size:0.78em; color:#95a5a6; margin-top:12px; line-height:1.6;">
+        💡 設定後、ローカル保存した写真にマウスオーバーすると「☁️」ボタンが現れます。タップでGitHubに保存され、他のデバイスからも見られます。
+      </p>
+    </div>
+    <div class="actions">
+      <button class="btn-cancel" id="closeSettings">閉じる</button>
     </div>
   </div>
 </div>
@@ -2703,6 +2836,119 @@ let _db = null;
 let photoCacheByDate = {};       // 同期アクセス用メモリキャッシュ
 let cachedStorageUsage = 0;      // ストレージ使用量のキャッシュ
 
+/* ============================================================
+   ☁️ クラウド同期（GitHub PAT経由）
+   ============================================================ */
+const GITHUB_PAT_KEY = "github_pat_v1";
+const GITHUB_OWNER = "koheiefujii-jpg";
+const GITHUB_REPO = "-";
+const GITHUB_BRANCH = "main";
+const CLOUD_MANIFEST_PATH = "photos/manifest.json";
+let cloudPhotosByDate = {};       // クラウド側の写真（日付別）
+
+function getGitHubPAT() {
+  return localStorage.getItem(GITHUB_PAT_KEY) || "";
+}
+function setGitHubPAT(pat) {
+  if (pat) localStorage.setItem(GITHUB_PAT_KEY, pat);
+  else localStorage.removeItem(GITHUB_PAT_KEY);
+}
+
+/* GitHub Contents API: ファイル取得 */
+async function ghGetFile(path, pat) {
+  const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}?ref=${GITHUB_BRANCH}`;
+  const res = await fetch(url, {
+    headers: { 'Authorization': `Bearer ${pat}`, 'Accept': 'application/vnd.github+json' }
+  });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`GET失敗: ${res.status}`);
+  return await res.json();
+}
+
+/* GitHub Contents API: ファイル作成・更新 */
+async function ghPutFile(path, base64Content, message, pat, sha) {
+  const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}`;
+  const body = { message, content: base64Content, branch: GITHUB_BRANCH };
+  if (sha) body.sha = sha;
+  const res = await fetch(url, {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${pat}`,
+      'Content-Type': 'application/json',
+      'Accept': 'application/vnd.github+json'
+    },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.message || `PUT失敗: ${res.status}`);
+  }
+  return await res.json();
+}
+
+/* UTF-8 文字列をbase64に */
+function utf8ToBase64(str) {
+  return btoa(unescape(encodeURIComponent(str)));
+}
+function base64ToUtf8(b64) {
+  return decodeURIComponent(escape(atob(b64.replace(/\n/g, ''))));
+}
+
+/* 写真をGitHubにアップロード */
+async function uploadPhotoToCloud(photo, dateStr) {
+  const pat = getGitHubPAT();
+  if (!pat) throw new Error("GitHub PATが設定されていません。⚙️設定で登録してください。");
+
+  // photo.url は "data:image/jpeg;base64,..." 形式
+  const base64 = photo.url.split(',')[1];
+  const timestamp = Date.now();
+  const filename = `${timestamp}.jpg`;
+  const path = `photos/${dateStr}/${filename}`;
+
+  // 写真ファイルをアップロード
+  await ghPutFile(path, base64, `Add photo: ${dateStr} ${photo.category}`, pat);
+
+  // manifest.json を更新（既存がなければ作成）
+  let sha = null;
+  let manifest = {};
+  try {
+    const existing = await ghGetFile(CLOUD_MANIFEST_PATH, pat);
+    if (existing) {
+      sha = existing.sha;
+      manifest = JSON.parse(base64ToUtf8(existing.content));
+    }
+  } catch (e) { /* 初回 */ }
+
+  if (!manifest[dateStr]) manifest[dateStr] = [];
+  manifest[dateStr].push({
+    url: path,
+    category: photo.category,
+    caption: photo.caption || "",
+    timestamp: timestamp
+  });
+
+  const newContent = utf8ToBase64(JSON.stringify(manifest, null, 2));
+  await ghPutFile(CLOUD_MANIFEST_PATH, newContent, `Update photo manifest: ${dateStr}`, pat, sha);
+
+  // 即座にクラウド側のキャッシュも更新
+  cloudPhotosByDate = manifest;
+  return path;
+}
+
+/* 起動時にクラウドのmanifestを取得（PAT不要、Pages経由で読み込み） */
+async function loadCloudPhotos() {
+  try {
+    const res = await fetch(`./photos/manifest.json?t=${Date.now()}`);
+    if (res.ok) {
+      cloudPhotosByDate = await res.json();
+    } else {
+      cloudPhotosByDate = {};
+    }
+  } catch (e) {
+    cloudPhotosByDate = {};
+  }
+}
+
 /* IndexedDB を開く */
 function openDB() {
   return new Promise((resolve, reject) => {
@@ -2805,7 +3051,13 @@ function getPhotosForDate(dateStr) {
   const data = getDataByDate(dateStr);
   const builtIn = (data && data.photos) ? data.photos : [];
   const userPhotos = photoCacheByDate[dateStr] || [];
-  return [...builtIn, ...userPhotos];
+  // クラウド写真：URLは相対パス（GitHub Pagesからの配信）に変換
+  const cloud = (cloudPhotosByDate[dateStr] || []).map(p => ({
+    ...p,
+    url: p.url.startsWith('http') ? p.url : `./${p.url}`,
+    isCloudPhoto: true
+  }));
+  return [...builtIn, ...cloud, ...userPhotos];
 }
 
 async function addUserPhoto(dateStr, photo) {
@@ -3046,7 +3298,9 @@ function renderPhotoSection(dateStr, photos) {
     <div class="photo-thumb" data-url="${photo.url}" data-caption="${escapeHtml(photo.caption || '')}">
       <span class="photo-category-label">${photo.category}</span>
       ${photo.isUserPhoto ? `<button class="photo-delete-btn" data-photo-id="${photo.id}" title="削除">×</button>` : ""}
+      ${photo.isUserPhoto ? `<button class="photo-cloud-btn" data-photo-id="${photo.id}" title="クラウドに保存">☁️</button>` : ""}
       ${photo.isUserPhoto ? `<span class="photo-local-badge" title="このデバイスでのみ見える写真">📱 端末のみ</span>` : ""}
+      ${photo.isCloudPhoto ? `<span class="photo-cloud-badge" title="クラウド保存済み（全デバイスで閲覧可）">☁️ 全端末</span>` : ""}
       <img src="${photo.url}" alt="${escapeHtml(photo.caption || '')}">
       ${photo.caption ? `<div class="photo-thumb-caption">${escapeHtml(photo.caption)}</div>` : ""}
     </div>
@@ -3129,7 +3383,41 @@ function bindPhotoEvents() {
   document.querySelectorAll(".photo-thumb").forEach(thumb => {
     thumb.addEventListener("click", (e) => {
       if (e.target.classList.contains("photo-delete-btn")) return;
+      if (e.target.classList.contains("photo-cloud-btn")) return;
       openLightbox(thumb.dataset.url, thumb.dataset.caption);
+    });
+  });
+
+  // ☁️ クラウドアップロードボタン
+  document.querySelectorAll(".photo-cloud-btn").forEach(btn => {
+    btn.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      const pat = getGitHubPAT();
+      if (!pat) {
+        if (confirm("クラウド保存にはGitHub PATの設定が必要です。設定画面を開きますか？")) {
+          document.getElementById("settingsModal").classList.add("show");
+          updatePatStatus();
+        }
+        return;
+      }
+      const photoId = parseFloat(btn.dataset.photoId);
+      const photos = photoCacheByDate[selectedDate] || [];
+      const target = photos.find(p => p.id === photoId);
+      if (!target) return;
+
+      btn.classList.add("uploading");
+      btn.textContent = "⏳";
+      try {
+        await uploadPhotoToCloud(target, selectedDate);
+        // ローカルから削除（クラウド側で見えるようになるので重複を避ける）
+        await deleteUserPhoto(selectedDate, photoId);
+        renderCalendar();
+        renderDetail();
+      } catch (err) {
+        alert("クラウド保存に失敗しました：" + err.message);
+        btn.classList.remove("uploading");
+        btn.textContent = "☁️";
+      }
     });
   });
 
@@ -4822,15 +5110,66 @@ document.getElementById("closeManageImports").addEventListener("click", () => {
   document.getElementById("manageImportsModal").classList.remove("show");
 });
 
+/* ===== ⚙️ 設定モーダルのイベント ===== */
+function updatePatStatus() {
+  const status = document.getElementById("patStatus");
+  const settingsBtn = document.getElementById("settingsBtn");
+  const input = document.getElementById("patInput");
+  const pat = getGitHubPAT();
+  if (pat) {
+    status.textContent = "✓ 設定済み";
+    status.style.background = "#e8f5e9";
+    status.style.color = "#2e7d32";
+    settingsBtn.classList.remove("unconfigured");
+    input.value = "•".repeat(20);
+  } else {
+    status.textContent = "未設定";
+    status.style.background = "#fff3e0";
+    status.style.color = "#e65100";
+    settingsBtn.classList.add("unconfigured");
+    input.value = "";
+  }
+}
+
+document.getElementById("settingsBtn").addEventListener("click", () => {
+  document.getElementById("settingsModal").classList.add("show");
+  updatePatStatus();
+});
+document.getElementById("closeSettings").addEventListener("click", () => {
+  document.getElementById("settingsModal").classList.remove("show");
+});
+document.getElementById("savePat").addEventListener("click", () => {
+  const input = document.getElementById("patInput");
+  const val = input.value.trim();
+  if (!val || val.startsWith("•")) {
+    alert("PATを入力してください。");
+    return;
+  }
+  if (!val.startsWith("ghp_") && !val.startsWith("github_pat_")) {
+    if (!confirm("これは正しいGitHub PATの形式ではない可能性があります。それでも保存しますか？")) return;
+  }
+  setGitHubPAT(val);
+  updatePatStatus();
+  alert("✅ 保存しました。これでクラウド保存が使えます。");
+});
+document.getElementById("clearPat").addEventListener("click", () => {
+  if (confirm("PATを削除します。今後クラウド保存は無効になります。")) {
+    setGitHubPAT(null);
+    updatePatStatus();
+  }
+});
+
 // 初期描画（IndexedDB の準備を待ってから）
 (async function init() {
   try {
     await openDB();
     await migrateFromLocalStorage();
     await refreshPhotoCache();
+    await loadCloudPhotos(); // クラウド側のmanifestを取得
   } catch (e) {
     console.error("ストレージ初期化失敗:", e);
   }
+  updatePatStatus();
 
   // 起動時：今日の日付の月を表示
   const today = new Date();
