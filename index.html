@@ -1,0 +1,5391 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- ============================================
+     🛡 プライバシー対策（層1）：検索エンジン除外
+     ============================================ -->
+<meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
+<meta name="googlebot" content="noindex,nofollow">
+
+<!-- 中身を隠した汎用タイトル（ブックマーク・履歴対策） -->
+<title>Dashboard</title>
+
+<style>
+  /* 🛡 プライバシー対策（層2）：ロック画面の表示制御
+     ※ より詳細な .lock-screen スタイルは下部にあるが、
+        このルールはより詳細度が高いセレクタなので必ず勝つ */
+  body.locked > .container { display: none !important; }
+  body:not(.locked) .lock-screen { display: none !important; }
+</style>
+
+<style>
+  /* ============================================
+     ベーススタイル
+     ============================================ */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif;
+    background: #f5f7fa;
+    color: #2c3e50;
+    line-height: 1.6;
+    padding: 20px;
+  }
+  .container { max-width: 1200px; margin: 0 auto; }
+
+  /* ヘッダー */
+  header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 24px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  }
+  header h1 { font-size: 1.8em; margin-bottom: 4px; }
+  header p { opacity: 0.9; font-size: 0.95em; }
+
+  /* ============================================
+     期間選択ボタン
+     ============================================ */
+  .period-selector {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    background: white;
+    padding: 12px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    flex-wrap: wrap;
+  }
+  .period-btn {
+    flex: 1;
+    min-width: 80px;
+    padding: 10px 16px;
+    border: 2px solid #e1e8ed;
+    background: white;
+    color: #5a6c7d;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s;
+    font-size: 0.95em;
+  }
+  .period-btn:hover { background: #f0f3f7; border-color: #667eea; }
+  .period-btn.active {
+    background: #667eea;
+    color: white;
+    border-color: #667eea;
+    box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3);
+  }
+
+  /* ============================================
+     メインレイアウト
+     ============================================ */
+  .main-grid {
+    display: grid;
+    grid-template-columns: minmax(320px, 1fr) 2fr;
+    gap: 20px;
+  }
+  @media (max-width: 768px) {
+    .main-grid { grid-template-columns: 1fr; }
+  }
+
+  /* カレンダー */
+  .calendar-card {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    align-self: flex-start;
+  }
+  .calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+  .calendar-header h2 { font-size: 1.2em; color: #2c3e50; }
+  .nav-btn {
+    background: #f0f3f7;
+    border: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1.2em;
+    color: #5a6c7d;
+    transition: all 0.2s;
+  }
+  .nav-btn:hover { background: #667eea; color: white; }
+
+  .calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+  }
+  .day-name {
+    text-align: center;
+    font-weight: 600;
+    color: #95a5a6;
+    padding: 8px 0;
+    font-size: 0.85em;
+  }
+  .day-name:nth-child(1) { color: #e74c3c; }
+  .day-name:nth-child(7) { color: #3498db; }
+
+  .day-cell {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.15s;
+    position: relative;
+    background: #f5f5f5;
+    color: #bdc3c7;
+    font-size: 0.95em;
+  }
+  .day-cell.empty { background: transparent; cursor: default; }
+  .day-cell.no-data { background: #f5f7fa; color: #95a5a6; }
+  .day-cell.no-data:hover { background: #ebeef2; }
+  .day-cell.has-data {
+    background: #d4dffc;
+    color: #2c3e50;
+    font-weight: 700;
+  }
+  .day-cell.has-data:hover {
+    background: #a8bff8;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(102, 126, 234, 0.25);
+  }
+  .day-cell.selected {
+    background: #667eea !important;
+    color: white !important;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  }
+  /* 今日の日付：オレンジの太枠＋下線 */
+  .day-cell.today {
+    box-shadow: inset 0 0 0 2px #f39c12;
+    font-weight: 800;
+  }
+  .day-cell.today::before {
+    content: "今日";
+    position: absolute;
+    top: -2px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-100%);
+    background: #f39c12;
+    color: white;
+    font-size: 0.55em;
+    padding: 1px 6px;
+    border-radius: 4px;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  /* 今日かつ選択中：オレンジ枠を残しつつ選択色に */
+  .day-cell.today.selected {
+    box-shadow: inset 0 0 0 2px #f39c12, 0 4px 12px rgba(102, 126, 234, 0.4);
+  }
+  .day-cell.has-data::after {
+    content: "";
+    position: absolute;
+    bottom: 4px;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: #667eea;
+  }
+  /* 写真がある日は緑のドット追加 */
+  .day-cell.has-photo::before {
+    content: "📷";
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    font-size: 0.6em;
+    opacity: 0.7;
+  }
+  .day-cell.selected::after { background: white; }
+
+  .legend {
+    display: flex;
+    gap: 16px;
+    margin-top: 16px;
+    font-size: 0.8em;
+    color: #7f8c8d;
+    flex-wrap: wrap;
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-box { width: 14px; height: 14px; border-radius: 4px; }
+
+  /* ============================================
+     詳細パネル
+     ============================================ */
+  .detail-card {
+    background: white;
+    padding: 24px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    min-height: 400px;
+  }
+  .detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid #f0f3f7;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .detail-date { font-size: 1.4em; font-weight: 700; color: #2c3e50; }
+  .detail-meta { display: flex; gap: 8px; flex-wrap: wrap; }
+  .badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 16px;
+    font-size: 0.85em;
+    font-weight: 600;
+  }
+  .badge-subject { background: #e3f2fd; color: #1976d2; }
+  .badge-class { background: #f3e5f5; color: #7b1fa2; }
+  .badge-positive { background: #fff3e0; color: #e65100; }
+  .badge-photos { background: #e8f5e9; color: #2e7d32; }
+
+  .section { margin-bottom: 18px; }
+  .section-title {
+    font-size: 0.9em;
+    font-weight: 700;
+    color: #667eea;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .section-title::before {
+    content: "";
+    width: 3px;
+    height: 14px;
+    background: #667eea;
+    border-radius: 2px;
+  }
+  .section-content {
+    color: #34495e;
+    line-height: 1.7;
+    padding-left: 12px;
+    white-space: pre-wrap;
+    font-size: 0.95em;
+  }
+
+  /* 「詳しく見る」ボタン */
+  .detail-toggle-btn {
+    background: none;
+    border: 1px solid #d4dffc;
+    color: #667eea;
+    cursor: pointer;
+    font-size: 0.78em;
+    padding: 3px 10px;
+    margin-left: 10px;
+    border-radius: 12px;
+    font-weight: 600;
+    transition: all 0.15s;
+    vertical-align: middle;
+  }
+  .detail-toggle-btn:hover {
+    background: #667eea;
+    color: white;
+    border-color: #667eea;
+  }
+  /* 詳細分析の表示エリア */
+  .section-detail {
+    margin-top: 10px;
+    margin-left: 12px;
+    padding: 14px 16px;
+    background: linear-gradient(to right, #f5f7ff, #fafbfc);
+    border-left: 3px solid #667eea;
+    border-radius: 0 6px 6px 0;
+    font-size: 0.92em;
+    line-height: 1.8;
+    color: #2c3e50;
+    white-space: pre-wrap;
+  }
+  .section-detail strong {
+    color: #5568d3;
+    font-weight: 700;
+  }
+  .section-detail em {
+    color: #667eea;
+    font-style: normal;
+    background: #fff8e1;
+    padding: 1px 4px;
+    border-radius: 3px;
+  }
+  .section-detail blockquote {
+    margin: 10px 0;
+    padding: 8px 12px;
+    background: white;
+    border-left: 3px solid #95a5a6;
+    color: #5a6c7d;
+    font-style: italic;
+    border-radius: 0 4px 4px 0;
+  }
+
+  /* ============================================
+     写真ギャラリー
+     ============================================ */
+  .photo-section {
+    margin-bottom: 18px;
+    padding: 16px;
+    background: #fafbfc;
+    border-radius: 10px;
+    border: 1px solid #e1e8ed;
+  }
+  .photo-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .photo-category-tabs {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+  .category-tab {
+    padding: 4px 12px;
+    background: white;
+    border: 1px solid #e1e8ed;
+    border-radius: 16px;
+    cursor: pointer;
+    font-size: 0.8em;
+    color: #5a6c7d;
+    transition: all 0.2s;
+  }
+  .category-tab:hover { background: #f0f3f7; }
+  .category-tab.active {
+    background: #667eea;
+    color: white;
+    border-color: #667eea;
+  }
+
+  .photo-grid {
+    display: grid;
+    /* スマホ縦は強制2列、タブレット以上は自動 */
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  @media (min-width: 600px) {
+    .photo-grid {
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 10px;
+    }
+  }
+  .photo-thumb {
+    position: relative;
+    aspect-ratio: 4 / 3;  /* 横長気味の表示エリアにする */
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    background: #2c3e50;  /* 背景は黒寄りで写真が浮き立つように */
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .photo-thumb:hover {
+    transform: scale(1.03);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+  .photo-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;  /* 全体が見えるように */
+  }
+  .photo-thumb-caption {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+    color: white;
+    padding: 8px;
+    font-size: 0.75em;
+    line-height: 1.3;
+  }
+  .photo-category-label {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    background: rgba(102, 126, 234, 0.95);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.7em;
+    font-weight: 600;
+  }
+  /* このデバイスのみ表示の写真にバッジ */
+  .photo-local-badge {
+    position: absolute;
+    bottom: 6px;
+    right: 6px;
+    background: rgba(231, 76, 60, 0.92);
+    color: white;
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-size: 0.62em;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  /* クラウド同期済みバッジ */
+  .photo-cloud-badge {
+    position: absolute;
+    bottom: 6px;
+    right: 6px;
+    background: rgba(39, 174, 96, 0.92);
+    color: white;
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-size: 0.62em;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  /* クラウドアップロードボタン */
+  .photo-cloud-btn {
+    position: absolute;
+    top: 6px;
+    right: 36px;
+    background: rgba(52, 152, 219, 0.95);
+    color: white;
+    border: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75em;
+    z-index: 5;
+  }
+  .photo-cloud-btn.uploading {
+    background: rgba(243, 156, 18, 0.95);
+    display: flex;
+    animation: cloudSpin 1s linear infinite;
+  }
+  @keyframes cloudSpin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  .photo-thumb:hover .photo-cloud-btn { display: flex; }
+
+  /* 設定（歯車）ボタン */
+  .settings-btn {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: white;
+    border: 1px solid #e1e8ed;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    font-size: 1.2em;
+    color: #5a6c7d;
+    z-index: 50;
+    transition: all 0.2s;
+  }
+  .settings-btn:hover {
+    background: #f0f3f7;
+    transform: scale(1.05);
+  }
+  .settings-btn.unconfigured::after {
+    content: "!";
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    background: #e74c3c;
+    color: white;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    font-size: 0.7em;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .photo-delete-btn {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    background: rgba(231, 76, 60, 0.9);
+    color: white;
+    border: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8em;
+    z-index: 5;
+  }
+  .photo-thumb:hover .photo-delete-btn { display: flex; }
+
+  /* ドロップゾーン */
+  /* 「もっと見る」トグルボタン */
+  .photo-toggle-btn {
+    width: 100%;
+    padding: 10px;
+    margin-top: 10px;
+    background: white;
+    border: 1px dashed #c8d0db;
+    border-radius: 8px;
+    cursor: pointer;
+    color: #5a6c7d;
+    font-size: 0.85em;
+    font-weight: 600;
+    transition: all 0.2s;
+  }
+  .photo-toggle-btn:hover {
+    border-color: #667eea;
+    background: #f0f3f7;
+    color: #667eea;
+  }
+
+  .photo-dropzone {
+    border: 2px dashed #c8d0db;
+    border-radius: 10px;
+    padding: 24px;
+    text-align: center;
+    color: #95a5a6;
+    transition: all 0.2s;
+    cursor: pointer;
+    margin-top: 10px;
+  }
+  .photo-dropzone:hover, .photo-dropzone.dragover {
+    border-color: #667eea;
+    background: #f0f3f7;
+    color: #667eea;
+  }
+  .photo-dropzone .icon { font-size: 1.8em; margin-bottom: 6px; }
+  .photo-dropzone p { font-size: 0.9em; margin: 4px 0; }
+  .photo-dropzone .hint { font-size: 0.8em; opacity: 0.7; }
+  .photo-dropzone input[type="file"] { display: none; }
+
+  /* カテゴリ選択モーダル */
+  .category-picker {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 999;
+    align-items: center;
+    justify-content: center;
+  }
+  .category-picker.show { display: flex; }
+  .category-picker-card {
+    background: white;
+    border-radius: 12px;
+    padding: 16px;
+    max-width: 420px;
+    width: 92%;
+    max-height: 92vh;             /* 画面に収まるように */
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .category-picker-card h3 {
+    margin-bottom: 8px;
+    font-size: 1.05em;
+    flex-shrink: 0;
+  }
+  /* スクロール可能なエリア */
+  .category-picker-scroll {
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+    padding-right: 4px;
+  }
+  /* カテゴリボタンを2列グリッドに */
+  .category-picker-buttons {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+  .category-picker-buttons button {
+    padding: 10px 8px;
+    border: 2px solid #e1e8ed;
+    background: white;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.85em;
+    transition: all 0.15s;
+    text-align: center;
+    line-height: 1.3;
+  }
+  .category-picker-buttons button:hover {
+    border-color: #667eea;
+    background: #f0f3f7;
+  }
+  .category-picker input[type="text"] {
+    width: 100%;
+    padding: 10px;
+    border: 2px solid #e1e8ed;
+    border-radius: 8px;
+    font-size: 0.95em;
+    margin-bottom: 10px;
+  }
+  /* プレビュー画像のサイズを抑える */
+  #uploadPreview {
+    max-height: 120px !important;
+  }
+  /* アクションは下部に固定 */
+  .category-picker .actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    border-top: 1px solid #f0f3f7;
+    padding-top: 10px;
+    margin-top: 8px;
+    flex-shrink: 0;
+  }
+  .category-picker .actions button {
+    padding: 10px 14px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.9em;
+  }
+  /* 小さい画面ではアクションボタンを縦並びに */
+  @media (max-width: 480px) {
+    .category-picker .actions {
+      flex-direction: column-reverse;
+    }
+    .category-picker .actions button {
+      width: 100%;
+    }
+  }
+  .btn-cancel { background: #ecf0f1; color: #5a6c7d; }
+  .btn-save { background: #667eea; color: white; }
+
+  /* ライトボックス */
+  .lightbox {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.92);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    cursor: pointer;
+  }
+  .lightbox.show { display: flex; }
+  .lightbox-content {
+    max-width: 95%;
+    max-height: 90%;
+    cursor: default;
+  }
+  .lightbox img {
+    max-width: 100%;
+    max-height: 80vh;
+    border-radius: 8px;
+    display: block;
+  }
+  .lightbox-caption {
+    color: white;
+    text-align: center;
+    margin-top: 16px;
+    font-size: 1em;
+  }
+  .lightbox-close {
+    position: absolute;
+    top: 20px;
+    right: 24px;
+    background: none;
+    border: none;
+    color: white;
+    font-size: 2em;
+    cursor: pointer;
+    line-height: 1;
+  }
+
+  /* 空状態 */
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: #95a5a6;
+  }
+  .empty-state .icon { font-size: 3em; margin-bottom: 12px; opacity: 0.5; }
+  .empty-state h3 { font-size: 1.1em; margin-bottom: 8px; }
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .stat-card {
+    background: linear-gradient(135deg, #f5f7fa 0%, #e9eef5 100%);
+    padding: 16px;
+    border-radius: 10px;
+    border-left: 4px solid #667eea;
+  }
+  .stat-label { font-size: 0.8em; color: #7f8c8d; margin-bottom: 4px; }
+  .stat-value { font-size: 1.6em; font-weight: 700; color: #2c3e50; }
+
+  /* タップ可能な統計カード */
+  .stat-card-clickable {
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+  .stat-card-clickable:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+  }
+  .stat-card-clickable::after {
+    content: "▼ タップで詳細";
+    display: block;
+    font-size: 0.7em;
+    color: #95a5a6;
+    margin-top: 4px;
+  }
+  .stat-card-clickable.active {
+    border-left-color: #f39c12;
+    background: linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%);
+    box-shadow: 0 4px 12px rgba(243, 156, 18, 0.3);
+  }
+  .stat-card-clickable.active::after {
+    content: "▲ 閉じる";
+    color: #d35400;
+    font-weight: 700;
+  }
+
+  /* タップ可能なチャートバー */
+  .chart-bar-row.clickable {
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 6px;
+    transition: background 0.15s;
+  }
+  .chart-bar-row.clickable:hover {
+    background: #f5f7fa;
+  }
+  .chart-bar-row.clickable.active {
+    background: #fff8e1;
+  }
+
+  /* ドリルダウン詳細パネル */
+  .drill-detail {
+    background: white;
+    border: 2px solid #f39c12;
+    border-radius: 10px;
+    padding: 16px;
+    margin: 8px 0 16px;
+    animation: drillDownFadeIn 0.25s ease;
+  }
+  @keyframes drillDownFadeIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .drill-title {
+    font-weight: 700;
+    color: #d35400;
+    margin-bottom: 12px;
+    font-size: 1em;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .drill-empty {
+    color: #95a5a6;
+    text-align: center;
+    padding: 16px;
+    font-style: italic;
+  }
+  .drill-date-block {
+    margin-bottom: 14px;
+  }
+  .drill-date {
+    font-weight: 700;
+    color: #667eea;
+    font-size: 0.85em;
+    margin-bottom: 6px;
+  }
+  .drill-quotes {
+    list-style: none;
+    padding-left: 0;
+  }
+  .drill-quotes li {
+    padding: 8px 12px;
+    background: #f9fafc;
+    border-left: 3px solid #c8d0db;
+    border-radius: 0 6px 6px 0;
+    margin: 6px 0;
+    font-size: 0.88em;
+    line-height: 1.7;
+    color: #2c3e50;
+  }
+  .drill-quotes li strong { color: #5568d3; }
+  .drill-quotes li em {
+    background: #fff8e1;
+    color: #d35400;
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-style: normal;
+  }
+
+  .entry-list { display: flex; flex-direction: column; gap: 12px; }
+  .entry-item {
+    background: #f9fafc;
+    padding: 14px;
+    border-radius: 8px;
+    border-left: 3px solid #667eea;
+  }
+  .entry-date {
+    font-weight: 700;
+    color: #667eea;
+    font-size: 0.9em;
+    margin-bottom: 6px;
+  }
+  .entry-summary { color: #34495e; font-size: 0.9em; }
+
+  /* ============================================
+     期間まとめ：チャート＆ビジュアル
+     ============================================ */
+  .period-chart {
+    margin-top: 8px;
+  }
+  .chart-bar-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 6px 0;
+    font-size: 0.85em;
+  }
+  .chart-bar-label {
+    min-width: 100px;
+    color: #5a6c7d;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+  .chart-bar-track {
+    flex: 1;
+    background: #ecf0f1;
+    height: 22px;
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+    min-width: 50px;
+  }
+  .chart-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #667eea, #764ba2);
+    border-radius: 4px;
+    transition: width 0.4s;
+  }
+  .chart-bar-value {
+    min-width: 50px;
+    text-align: right;
+    font-weight: 700;
+    color: #2c3e50;
+    flex-shrink: 0;
+  }
+
+  /* キーワードタグ */
+  .keyword-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .keyword-tag {
+    background: white;
+    border: 1.5px solid #d4dffc;
+    border-radius: 16px;
+    padding: 6px 10px 6px 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85em;
+    color: #2c3e50;
+    transition: all 0.15s;
+  }
+  .keyword-tag:hover {
+    border-color: #667eea;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(102, 126, 234, 0.15);
+  }
+  .keyword-tag strong { font-weight: 700; }
+  .keyword-count {
+    background: #667eea;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.75em;
+    font-weight: 700;
+  }
+
+  /* ハイライトボックス */
+  .highlight-box {
+    background: linear-gradient(135deg, #fff5e6 0%, #fff0d4 100%);
+    border-left: 4px solid #f39c12;
+    padding: 14px 16px;
+    border-radius: 0 8px 8px 0;
+    margin-top: 8px;
+  }
+  .highlight-box h4 {
+    color: #d35400;
+    font-size: 0.95em;
+    margin-bottom: 8px;
+  }
+  .highlight-box .highlight-item {
+    font-size: 0.92em;
+    color: #2c3e50;
+    line-height: 1.7;
+    margin: 4px 0;
+  }
+
+  /* 自動生成のナラティブサマリ */
+  .narrative-summary {
+    background: linear-gradient(135deg, #f5f7ff 0%, #ede9fe 100%);
+    border-left: 4px solid #667eea;
+    padding: 16px 18px;
+    border-radius: 0 10px 10px 0;
+    margin-top: 8px;
+    font-size: 0.95em;
+    line-height: 1.8;
+    color: #2c3e50;
+  }
+  .narrative-summary strong { color: #5568d3; font-weight: 700; }
+
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: #f5f7fa; }
+  ::-webkit-scrollbar-thumb { background: #c8cfd6; border-radius: 4px; }
+
+  /* ============================================
+     🛡 ロック画面のスタイル
+     ============================================ */
+  .lock-screen {
+    position: fixed;
+    inset: 0;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+  }
+  .lock-card {
+    background: white;
+    padding: 40px;
+    border-radius: 16px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    max-width: 360px;
+    width: 90%;
+    text-align: center;
+  }
+  .lock-card .lock-icon { font-size: 3em; margin-bottom: 12px; }
+  .lock-card h2 { color: #2c3e50; margin-bottom: 8px; font-size: 1.3em; }
+  .lock-card p { color: #7f8c8d; font-size: 0.9em; margin-bottom: 24px; }
+  .lock-card input[type="password"] {
+    width: 100%;
+    padding: 14px;
+    border: 2px solid #e1e8ed;
+    border-radius: 10px;
+    font-size: 1em;
+    margin-bottom: 12px;
+    text-align: center;
+    letter-spacing: 0.1em;
+  }
+  .lock-card input:focus { outline: none; border-color: #667eea; }
+  .lock-card button {
+    width: 100%;
+    padding: 14px;
+    background: #667eea;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 1em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .lock-card button:hover { background: #5568d3; }
+  .lock-card .error {
+    color: #e74c3c;
+    font-size: 0.85em;
+    margin-top: 8px;
+    min-height: 1em;
+  }
+  .lock-card .hint {
+    margin-top: 16px;
+    font-size: 0.75em;
+    color: #95a5a6;
+  }
+
+  /* ロック解除ボタン（右上） */
+  .lock-btn {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: rgba(255,255,255,0.9);
+    border: 1px solid #e1e8ed;
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.85em;
+    color: #5a6c7d;
+    z-index: 100;
+    transition: all 0.2s;
+  }
+  .lock-btn:hover { background: white; border-color: #667eea; color: #667eea; }
+</style>
+</head>
+<body class="locked">
+
+<!-- ============================================
+     🛡 ロック画面（層2）
+     ============================================ -->
+<div class="lock-screen" id="lockScreen">
+  <div class="lock-card">
+    <div class="lock-icon">🔒</div>
+    <h2>パスワードを入力</h2>
+    <p>このページは関係者専用です。</p>
+    <input type="password" id="passwordInput" placeholder="パスワード" autocomplete="off">
+    <button id="unlockBtn">解除する</button>
+    <div class="error" id="errorMsg"></div>
+    <div class="hint">パスワードを忘れた場合は管理者へお問い合わせください</div>
+  </div>
+</div>
+
+<!-- ロック解除（手動ロックボタン） -->
+<button class="lock-btn" id="manualLockBtn" style="display:none;" title="ロックする">🔒 ロック</button>
+<div class="container">
+
+  <header>
+    <h1>📊 授業分析ダッシュボード</h1>
+    <p>6年4組 / 自立した学習者育成プロジェクト</p>
+  </header>
+
+  <div class="period-selector">
+    <button class="period-btn active" data-period="day">📅 日</button>
+    <button class="period-btn" data-period="week">📆 週</button>
+    <button class="period-btn" data-period="month">🗓️ 月</button>
+    <button class="period-btn" data-period="half">📈 半年</button>
+    <button class="period-btn" data-period="year">📊 年間</button>
+  </div>
+
+  <div class="main-grid">
+
+    <div class="calendar-card">
+      <div class="calendar-header">
+        <button class="nav-btn" id="prevMonth">‹</button>
+        <div style="display:flex; flex-direction:column; align-items:center; gap:2px;">
+          <h2 id="monthLabel">2026年 4月</h2>
+          <button id="todayBtn" title="今日に戻る" style="background:#fff8e1; color:#d35400; border:1.5px solid #f39c12; padding:2px 12px; border-radius:12px; cursor:pointer; font-size:0.75em; font-weight:700;">📍 今日</button>
+        </div>
+        <button class="nav-btn" id="nextMonth">›</button>
+      </div>
+      <div class="calendar-grid" id="calendarGrid">
+        <div class="day-name">日</div>
+        <div class="day-name">月</div>
+        <div class="day-name">火</div>
+        <div class="day-name">水</div>
+        <div class="day-name">木</div>
+        <div class="day-name">金</div>
+        <div class="day-name">土</div>
+      </div>
+      <div class="legend">
+        <div class="legend-item">
+          <div class="legend-box" style="background: #d4dffc;"></div>
+          <span>分析データ</span>
+        </div>
+        <div class="legend-item">
+          <span>📷</span>
+          <span>写真あり</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-box" style="background: white; border:2px solid #f39c12;"></div>
+          <span>今日</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-box" style="background: #667eea;"></div>
+          <span>選択中</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="detail-card" id="detailCard">
+      <div class="empty-state">
+        <div class="icon">📋</div>
+        <h3>日付を選択してください</h3>
+        <p>カレンダーの色付きの日付をクリックすると、<br>その日の分析結果が表示されます。</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- カテゴリ選択モーダル -->
+<div class="category-picker" id="categoryPicker">
+  <div class="category-picker-card">
+    <h3>📷 写真のカテゴリを選択</h3>
+    <!-- スクロール可能なエリア -->
+    <div class="category-picker-scroll">
+      <div id="uploadProgress" style="font-size:0.8em; color:#7f8c8d; margin-bottom:8px;"></div>
+      <img id="uploadPreview" style="display:none; width:100%; max-width:100%; object-fit:contain; background:#2c3e50; border-radius:8px; margin-bottom:10px;" alt="プレビュー">
+      <div class="category-picker-buttons" id="categoryButtons"></div>
+      <input type="text" id="captionInput" placeholder="キャプション（任意）">
+    </div>
+    <!-- 下部に固定されるアクション -->
+    <div class="actions">
+      <button class="btn-cancel" id="cancelUpload">キャンセル</button>
+      <button class="btn-save" id="saveAllUpload" style="display:none; background:#27ae60;">全部このカテゴリで保存</button>
+      <button class="btn-save" id="confirmUpload">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- データの追加・出力モーダル -->
+<div class="category-picker" id="obsidianModal">
+  <div class="category-picker-card" style="max-width:480px;">
+    <h3>📂 データの追加・出力</h3>
+    <div class="category-picker-scroll">
+      <p style="font-size:0.85em; color:#5a6c7d; margin-bottom:12px;">
+        分析データの取り込み・書き出しができます。
+      </p>
+
+      <!-- 内部識別子（互換のため残す・非表示） -->
+      <input type="hidden" id="vaultNameInput">
+
+      <!-- 📤 エクスポート -->
+      <div style="font-size:0.75em; color:#95a5a6; font-weight:700; margin-bottom:6px; letter-spacing:1px;">📤 データを書き出す</div>
+      <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:18px;">
+        <button class="obsidian-export-btn" data-action="export-current" style="text-align:left; padding:12px 14px; border:2px solid #667eea; background:white; border-radius:10px; cursor:pointer; font-weight:600; color:#667eea; transition:all 0.2s; font-size:0.9em;">
+          📄 表示中の日をMarkdownでダウンロード
+        </button>
+        <button class="obsidian-export-btn" data-action="copy-current" style="text-align:left; padding:12px 14px; border:2px solid #c8d0db; background:white; border-radius:10px; cursor:pointer; font-weight:600; color:#5a6c7d; transition:all 0.2s; font-size:0.9em;">
+          📋 表示中の日をクリップボードにコピー
+        </button>
+        <button class="obsidian-export-btn" data-action="export-all" style="text-align:left; padding:12px 14px; border:2px solid #c8d0db; background:white; border-radius:10px; cursor:pointer; font-weight:600; color:#5a6c7d; transition:all 0.2s; font-size:0.9em;">
+          📦 全データを一括ダウンロード
+        </button>
+      </div>
+
+      <!-- 📥 インポート -->
+      <div style="font-size:0.75em; color:#95a5a6; font-weight:700; margin-bottom:6px; letter-spacing:1px;">📥 データを取り込む</div>
+      <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:14px;">
+        <button class="obsidian-export-btn" data-action="download-template" style="text-align:left; padding:12px 14px; border:2px solid #27ae60; background:white; border-radius:10px; cursor:pointer; font-weight:600; color:#27ae60; transition:all 0.2s; font-size:0.9em;">
+          📝 入力テンプレートをダウンロード
+        </button>
+        <button class="obsidian-export-btn" data-action="import-markdown" style="text-align:left; padding:12px 14px; border:2px solid #27ae60; background:#f0fff4; border-radius:10px; cursor:pointer; font-weight:600; color:#27ae60; transition:all 0.2s; font-size:0.9em;">
+          📥 テキスト/Markdownを貼り付けて取り込む
+        </button>
+        <button class="obsidian-export-btn" data-action="manage-imports" style="text-align:left; padding:12px 14px; border:1px solid #e1e8ed; background:white; border-radius:10px; cursor:pointer; font-weight:500; color:#7f8c8d; transition:all 0.2s; font-size:0.85em;">
+          🗂️ 取り込み済みデータの管理
+        </button>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="btn-cancel" id="closeObsidianModal">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<!-- 📥 Markdown取り込みモーダル -->
+<div class="category-picker" id="importModal">
+  <div class="category-picker-card" style="max-width:560px;">
+    <h3>📥 Markdownを取り込む</h3>
+    <div class="category-picker-scroll">
+      <p style="font-size:0.85em; color:#5a6c7d; margin-bottom:10px;">
+        Obsidianで書いた授業分析のMarkdownを貼り付けてください。テンプレート形式に従って自動解析します。
+      </p>
+      <textarea id="importTextarea" placeholder="---&#10;date: 2026-05-07&#10;class: 6年4組&#10;subject: 国語&#10;positive_count: 18&#10;---&#10;&#10;## よかったところ&#10;..." style="width:100%; min-height:300px; padding:12px; border:2px solid #e1e8ed; border-radius:8px; font-family:'Menlo','Consolas',monospace; font-size:0.85em; line-height:1.6;"></textarea>
+      <div id="importPreview" style="margin-top:10px; padding:10px; background:#f5f7ff; border-radius:6px; font-size:0.82em; color:#5a6c7d; display:none;"></div>
+    </div>
+    <div class="actions">
+      <button class="btn-cancel" id="cancelImport">キャンセル</button>
+      <button class="btn-save" id="parseImport" style="background:#27ae60;">📥 取り込む</button>
+    </div>
+  </div>
+</div>
+
+<!-- 🗂️ 取り込み済み管理モーダル -->
+<div class="category-picker" id="manageImportsModal">
+  <div class="category-picker-card" style="max-width:480px;">
+    <h3>🗂️ 取り込み済みデータの管理</h3>
+    <div class="category-picker-scroll">
+      <div id="manageImportsList"></div>
+    </div>
+    <div class="actions">
+      <button class="btn-cancel" id="closeManageImports">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<!-- ⚙️ 設定（フローティングボタン） -->
+<button class="settings-btn" id="settingsBtn" title="設定">⚙️</button>
+
+<!-- 設定モーダル -->
+<div class="category-picker" id="settingsModal">
+  <div class="category-picker-card" style="max-width:480px;">
+    <h3>⚙️ 設定</h3>
+    <div class="category-picker-scroll">
+      <!-- GitHub PAT 設定 -->
+      <div style="background:#f5f7ff; border-radius:8px; padding:14px; margin-bottom:14px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <strong style="color:#2c3e50;">☁️ クラウド同期</strong>
+          <span id="patStatus" style="font-size:0.75em; padding:3px 10px; border-radius:10px; background:#fff3e0; color:#e65100; font-weight:700;">未設定</span>
+        </div>
+        <p style="font-size:0.82em; color:#5a6c7d; margin-bottom:10px; line-height:1.6;">
+          GitHubのPersonal Access Token（PAT）を設定すると、写真をクラウド保存して全デバイスで閲覧できます。
+        </p>
+        <input type="password" id="patInput" placeholder="ghp_... または github_pat_..." style="width:100%; padding:10px; border:1.5px solid #d4dffc; border-radius:6px; font-size:0.85em; font-family:'Menlo','Consolas',monospace; margin-bottom:8px;">
+        <div style="display:flex; gap:6px;">
+          <button id="savePat" style="flex:1; padding:8px; background:#27ae60; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.85em;">保存</button>
+          <button id="clearPat" style="padding:8px 14px; background:#ecf0f1; color:#5a6c7d; border:none; border-radius:6px; cursor:pointer; font-size:0.85em;">削除</button>
+        </div>
+      </div>
+
+      <!-- PAT発行ガイド -->
+      <details style="background:#fafbfc; border-radius:6px; padding:10px 12px; font-size:0.82em;">
+        <summary style="cursor:pointer; color:#667eea; font-weight:600;">📖 PATの発行手順</summary>
+        <div style="margin-top:10px; line-height:1.7; color:#34495e;">
+          <ol style="padding-left:20px;">
+            <li>iPhone Safari等で <a href="https://github.com/settings/tokens" target="_blank" style="color:#667eea;">github.com/settings/tokens</a> を開く</li>
+            <li>「<strong>Generate new token (classic)</strong>」をタップ</li>
+            <li>Note：<code>授業ダッシュボード</code> など分かる名前</li>
+            <li>Expiration：<strong>No expiration</strong> 推奨</li>
+            <li>Select scopes：<strong><code>repo</code></strong>（フル）にチェック</li>
+            <li>「Generate token」をタップ</li>
+            <li>表示された <code>ghp_xxxxxxxx...</code> を <strong>長押しコピー</strong></li>
+            <li>このダッシュボードに戻って、上の入力欄に貼り付け→保存</li>
+          </ol>
+          <div style="margin-top:8px; padding:8px; background:#fff8e1; border-left:3px solid #f39c12; border-radius:0 4px 4px 0;">
+            ⚠️ PATは<strong>そのデバイスのみ</strong>に保存されます。iPhoneとMacなど複数デバイスで使う場合、それぞれで設定してください。
+          </div>
+        </div>
+      </details>
+
+      <!-- 一括クラウド同期 -->
+      <div style="background:#fff8e1; border-radius:8px; padding:14px; margin-top:14px; margin-bottom:14px; border-left:3px solid #f39c12;">
+        <strong style="color:#2c3e50; font-size:0.95em;">📤 ローカル写真の一括同期</strong>
+        <p style="font-size:0.82em; color:#5a6c7d; margin:8px 0 10px; line-height:1.6;">
+          このデバイスにだけ保存されている写真を、まとめてクラウドにアップロードします。完了すれば他のデバイスからも見られます。
+        </p>
+        <div id="bulkSyncCount" style="font-size:0.82em; color:#5a6c7d; margin-bottom:8px;"></div>
+        <button id="bulkSyncBtn" style="width:100%; padding:10px; background:#f39c12; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.9em;">📤 ローカル写真をすべてクラウドへ</button>
+        <div id="bulkSyncProgress" style="font-size:0.8em; color:#5a6c7d; margin-top:8px; min-height:1em;"></div>
+      </div>
+
+      <p style="font-size:0.78em; color:#95a5a6; margin-top:12px; line-height:1.6;">
+        💡 PAT設定後は、これから追加する写真は自動でクラウドに保存されます。過去の写真は上の「📤 一括同期」ボタンでまとめてアップロードできます。
+      </p>
+    </div>
+    <div class="actions">
+      <button class="btn-cancel" id="closeSettings">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<!-- ライトボックス（拡大表示） -->
+<div class="lightbox" id="lightbox">
+  <button class="lightbox-close" id="lightboxClose">×</button>
+  <div class="lightbox-content">
+    <img id="lightboxImg" src="" alt="">
+    <div class="lightbox-caption" id="lightboxCaption"></div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   🛡 プライバシー対策（層2）：パスワードゲート
+   ============================================================
+   ★ パスワードの変更方法：
+     1. 下の PASSWORD_HASH を変更したいパスワードのSHA-256ハッシュに置き換え
+     2. ハッシュは https://emn178.github.io/online-tools/sha256.html などで生成可能
+     3. もしくは、ブラウザのDevToolsでこのコードを実行：
+        await sha256("あなたのパスワード").then(console.log)
+
+   ★ 現在のパスワード：「6nen4kumi」（学級専用）
+     SHA-256: 69157cf1c3d9aa3fb24b00699af5da5fef59b9a34edaae5a33a4d3c7b48a7206
+   ============================================================ */
+const PASSWORD_HASH = "69157cf1c3d9aa3fb24b00699af5da5fef59b9a34edaae5a33a4d3c7b48a7206";
+const SESSION_KEY = "classroom_dashboard_unlocked_v1";
+
+/* SHA-256 ハッシュ計算 */
+async function sha256(str) {
+  const buf = new TextEncoder().encode(str);
+  const hash = await crypto.subtle.digest("SHA-256", buf);
+  return Array.from(new Uint8Array(hash))
+    .map(b => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+/* ロック解除処理 */
+async function tryUnlock(password) {
+  const hash = await sha256(password);
+  if (hash === PASSWORD_HASH) {
+    sessionStorage.setItem(SESSION_KEY, "1");
+    document.body.classList.remove("locked");
+    document.getElementById("manualLockBtn").style.display = "block";
+    document.title = "授業分析ダッシュボード";  // 解除後はタイトル復活
+    return true;
+  }
+  return false;
+}
+
+/* 手動ロック */
+function lockNow() {
+  sessionStorage.removeItem(SESSION_KEY);
+  document.body.classList.add("locked");
+  document.getElementById("manualLockBtn").style.display = "none";
+  document.title = "Dashboard";
+  document.getElementById("passwordInput").value = "";
+  document.getElementById("errorMsg").textContent = "";
+}
+
+/* 初期化：セッション中なら自動解除 */
+(async function initLock() {
+  if (sessionStorage.getItem(SESSION_KEY) === "1") {
+    document.body.classList.remove("locked");
+    document.getElementById("manualLockBtn").style.display = "block";
+    document.title = "授業分析ダッシュボード";
+  }
+})();
+
+/* イベントバインド */
+document.getElementById("unlockBtn").addEventListener("click", async () => {
+  const input = document.getElementById("passwordInput");
+  const error = document.getElementById("errorMsg");
+  const ok = await tryUnlock(input.value);
+  if (!ok) {
+    error.textContent = "パスワードが違います";
+    input.value = "";
+    input.focus();
+  } else {
+    error.textContent = "";
+  }
+});
+document.getElementById("passwordInput").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") document.getElementById("unlockBtn").click();
+});
+document.getElementById("manualLockBtn").addEventListener("click", () => {
+  if (confirm("ロックしますか？")) lockNow();
+});
+
+/* ============================================================
+   📌 分析データ
+   ★ 新しい日のデータはここに追加
+   ★ 写真は2種類の追加方法があります：
+     ① data に最初から photos を入れる（URLまたは相対パス）
+     ② ダッシュボード上でドラッグ＆ドロップで追加（localStorageに保存）
+   ============================================================ */
+const ANALYSIS_DATA = [
+  {
+    date: "2026-04-08",
+    subject: "始業式・学級開き",
+    class: "6年4組",
+    good: "始業式・学級開きの日。教師は子どもの素直さ・パッと向く反応・歌の上手さ・姿勢の良さに感動。教科書を業者並みに整えた3名（れいかさん・石川さん・小島優菜さん）から「リーダーをいっぱい作る」方針を打ち出し。学級通信を『ヴィンテージ』と命名し、時を経て価値が増す学級像を提示。教科書配りや写真撮影を子ども主導で行わせ、初日から自走の文化を仕掛けた。",
+    good_detail: `**1. 教師自身の感動と観察記録**
+> やっぱすごいね。先生実はね去年3年生の先生してたっていうですよ。その前は6年でその前も6年でその前4年。**6年生久しぶりで6年生やっぱすごいね。パッと前向くし、パッと色々できる**
+
+→ 6年生3回目の担任が、別学年（3年・4年）を経て戻ってきたことで「6年生の発達段階の高さ」を改めて実感。その感動がこの日全体を貫く。
+
+**2. 自発的リーダーの発見**
+教科書がきれいに並んでいるのを見て：
+> どっかの業者がやったかと思ってたら…**れいかさん・石川さん・小島優菜さん**
+
+→ 業者と間違えるレベルの仕事を子どもがしていた。それを*全員の前で名前を呼んで価値づけ*。さらに：
+> **そういうなんかいっぱいリーダーを作っていきたい**
+
+「特定の子だけがリーダー」ではなく **「全員がリーダーになり得る」** という方針宣言。
+
+**3. 学級通信「ヴィンテージ」の命名**
+> ヴィンテージっていうのは…**時を経て自分が増したものを指す**…ワインとか古い方が価値があるんですよ…ジーンズも履いた方がちょっと味がある
+
+→ *時間とともに価値が増す*ことを学級のメタファーに。**初日のすべての出来事が「ヴィンテージの素材」になる**という長期視点を提示。
+
+**4. 教科書配りに込めた哲学**
+> 先生が今からはい配るよってやるのは簡単ですけど、そこでやったって**先生が配るのがうまくなるだけ**ですよね。じゃなくて**みんなが配って自分たちでかける**
+
+→ 自走の哲学を**初日から痛快な逆説で言語化**。
+
+**5. 「信頼の経済」の宣言**
+> 提出物を**早く出してくれたら信頼が得られる**…宿題毎日出す人と忘れる人は**そっちが信頼できます**
+
+→ 細かいルールではなく **「信頼の積み上げ」** という抽象概念を初日に提示。これは年間を貫く価値観の宣言。`,
+    improve: "初日でやることが多く、教師の話す時間が長くなりがち。「ヴィンテージ」「教科書配り」「写真撮影」「自己紹介」「提出物」「ボランティア」と盛りだくさんで、子どもの認知負荷が高い可能性。",
+    improve_detail: `**初日の情報量の多さ**
+半日で以下のすべてを実施：
+- 学級通信「ヴィンテージ」の命名と説明
+- 教科書配り（9冊×2セッション）
+- 自己紹介カード作成
+- 写真撮影（個別）
+- 提出物・信頼の話
+- 入学式ボランティア募集
+- 連絡帳の書き方
+
+→ 重要な概念を**1〜2個に絞り**、残りは2日目以降に分散するのが理想。ただし「初日のインパクト」を狙う戦略でもある。
+
+**「12時にさよなら」のプレッシャー**
+> 12時にさよならがしたいんですよ。先生早く早く帰りたいですよう
+
+→ 教師の都合を口にすると、子どもが*急かされる感覚*を持つ可能性。「12時に帰れたらすごいから一緒に頑張ろう」のような**共同目標化**が望ましい。
+
+**自己紹介カードの「考えないで書け」**
+苦手な子には逆にプレッシャーになる可能性。書く例を1〜2個示すとよい。`,
+    growth: "教師：6年生3回目の経験から「6年生だからできる」を見抜いた観察眼。\n子ども：始業式の段階で教科書を整える子・自発的に質問できる子が複数。すでに自走の素地。",
+    growth_detail: `**教師の成長**
+- 別学年（3年生・4年生）を経験して戻ってきたことで、**学年差を相対化**できる視点
+- 「6年生だからできる」を*初日から信頼ベースの語り*に変換
+- 学級通信を「ヴィンテージ」と命名する**メタファー的言語感覚**
+
+**子どもの初日の現れ**
+- 教科書を業者と間違えるレベルで整える3名（れいかさん・石川さん・小島優菜さん）
+- 「青木さんが先生と誕生日が同じ（12月1日）」と接点を見つける子
+- 言ってないのに**雰囲気で感じ取る力**が見られる
+- 姿勢・歌・反応すべてが教師の感動を引き出した
+
+→ 始業式の段階で **「教師主導の学級開き」ではなく「子どもが既に動く学級開き」** が成立`,
+    independence: "主体性：教科書を自発的に整える子の出現／自己紹介・写真撮影を子ども主導で。\n自己調整：「考えないで書く」の自由度／自分のペースで写真を撮る。\n協働：「周りの人が助けてあげる」「得意な人が苦手な人を助ける」。\n価値観：信頼の蓄積こそが学級の通貨。",
+    independence_detail: `**主体性**
+- 教科書配りを*子ども主導*：「自分たちでとってもいいし、誰かに頼んでもいいし」
+- 写真撮影を**個別自走**
+- 業者と間違えるレベルで教科書を整えた**自発的行動**
+
+**自己調整**
+- 自己紹介カードで「考えないで書けばいい」と*書くハードルを下げた*
+- 写真撮影の順番を子どもに委ねる
+- 提出物を「明日でも明後日でもいい」と**柔軟性を確保**
+
+**協働**
+> やっぱ得意な人が得意とか苦手な人もあるから、そういうのを**助けてあげる**
+
+→ 初日に *「助け合いの文化」* を宣言。
+
+**価値観：信頼の経済**
+> ちゃんと出してくれる人と出してくれない人では信頼が違うんですよ
+
+→ 細かいルールではなく **「信頼の経済」** という抽象概念で学級を運営する方針。`,
+    next: "①「ヴィンテージ」の意味の継続的な再共有／②自己紹介カードの内容を写真と並べて掲示／③明日の入学式準備でのボランティアを名指しで価値づけ／④提出物の進捗を翌日朝に確認し信頼を可視化",
+    next_detail: `**1. 「ヴィンテージ」の意味の継続的な再共有**
+今日の説明だけでは概念が定着しない。週1回程度「**今週のヴィンテージ要素**」を学級通信で取り上げ、語彙を学級文化に定着させる。
+
+**2. 自己紹介カードの活用**
+書いたカードを*写真と並べて掲示*することで、初日のうちから「個人を見ている」メッセージに。
+
+**3. ボランティアの価値づけ**
+明日の入学式準備で手伝ってくれた子を*名指しで翌日の朝の会で言及*。「信頼の蓄積」を可視化。
+
+**4. 提出物の翌日朝確認**
+提出物の進捗を翌日朝に確認し、**早く出した子を価値づけ**。信頼の経済が機能していることを子どもに体感させる。
+
+**5. 教師の話す時間の管理**
+初日は仕方ないが、2日目以降は **「教師の話＝3分以内」** を意識。`,
+    motivation: "🟢 初日の高揚感が高い水準で持続。教師の感動と子どもの自発的行動が共鳴し、互いを引き上げる動機が観察された。",
+    motivation_detail: `**やりたさが高まった瞬間**
+- 教科書を業者並みに整えた**3名の自発性**
+- 「青木さん誕生日一緒」のような*個人接点*を発見する楽しさ
+- 写真撮影の*自分で撮る楽しさ*
+- 教師の「**やっぱ6年生すごい**」というリアクションへの呼応
+
+**動機の質**
+- 単に「楽しい」ではなく、*「自分から動きたい」*の段階
+- 教科書配りでも「自分たちでとっていい」と権限が渡された途端に動き出す
+- 教師の「**先生が配るのがうまくなるだけ**」という挑発的な言葉が**動機のスイッチ**になっている
+
+**動機の波の特徴**
+- 始業式の高揚感×6年生という発達段階×教師の信頼感のかけ算
+- ただし情報量が多いため、後半で集中が落ちる懸念もある`,
+    self_regulation: "💡 初日の段階で「やりたくないが取り組む」「目標・方法の調整」が萌芽。子どもの自発性が教師の枠を超え始めている。",
+    self_regulation_detail: `**観察された自己調整の4タイプ（初日の萌芽）**
+
+🎯 **目標・方法の調整**（最も顕著）
+- 教科書配りで「自分たちでとってもいい・誰かに頼んでもいい」と**方法を選ぶ**
+- 自己紹介カードで*「考えないで書く」*自由度
+- 写真撮影の順番を**自分たちで決める**
+
+🤔 **試行錯誤**
+- 教科書の名前間違いを発見した子の**確認行動**
+- 「ファイルの綴じ方」で間違える人がいて、隣で確認し合う
+
+⚡ **やりたくないが取り組む**（萌芽）
+- 自己紹介カードを書くのが苦手でも書く
+- ボランティア募集に応えようとする子
+
+❤️ **感情を乗り越える**（萌芽）
+- 初日の緊張感の中で発言する勇気
+- 「先生と誕生日同じ」のような接点を勇気を出して言う`,
+    transition: "💡 移行のキー：教師の「先生が配るのがうまくなるだけ」という挑発的な問いかけと、3名のリーダーの自発的行動を全体に価値づけたこと。",
+    transition_detail: `**移行を支えた要因**
+
+✨ **教師の挑発的問いかけ**
+> 先生が今からはい配るよってやるのは簡単ですけど、**先生が配るのがうまくなるだけ**ですよね
+
+→ 「教師の上手さ」と「子どもの上手さ」を対比し、後者を選ばせる構造。
+
+✨ **3名のリーダーの即時価値づけ**
+> 教科書のキレイな並び方…れいかさん・石川さん・小島優菜さん…**いっぱいリーダーを作っていきたい**
+
+→ 個別承認＋方針宣言の*ダブル効果*。
+
+🛠️ **「ヴィンテージ」というメタファー**
+- 学級が**時間と共に価値が増す**という長期視点を初日に提示
+- 1日目の出来事も*「ヴィンテージの素材になる」*という意味づけが可能に
+
+⏸️ **教師の不介入**
+- 教科書配り・写真撮影・自己紹介すべてで*子どもに任せた*
+- 結果が出るまで**待った**`,
+    teacher_intervention: "✨評価・承認（3名のリーダー名指し）と🛠️環境設計（ヴィンテージ・教科書配り任せ）が初日から機能。⏸️待つ姿勢も顕著。",
+    teacher_intervention_detail: `**観察された教師の関わり4類型**
+
+✨ **評価・承認**（最も特徴的）
+- リーダー3名を*名指しで全員の前で承認*
+- 「**やっぱ6年生すごい**」と**集団全体への感動を率直に開示**
+- 姿勢・歌・反応を一つひとつ言語化
+
+🛠️ **環境設計**
+- 学級通信「**ヴィンテージ**」の命名
+- 教科書配り・写真撮影を**子どもに任せる構造**
+- 「**信頼の経済**」という抽象概念の導入
+
+❓ **問いかけ**
+- 「自分たちでできそうですか？」
+- 「12時にさよならしたいですよね？」（共同目標の提案）
+
+⏸️ **待つ・任せる**
+- 教科書配りの間、*自分たちで動くまで介入しない*
+- 写真撮影は**順番も子ども任せ**
+
+❌ **避けたこと**
+- 細かいルールの押し付けをしなかった
+- 「ちゃんとやりなさい」型の指示を出さなかった
+- 「先生が代わりにやる」を選ばなかった`,
+    hypothesis: "**仮説**：始業式という*儀式的な日*にも、**子どもに権限を渡す瞬間**を意図的に設けることで、「教師が教える学級」ではなく*「子どもが動く学級」*として開始できる。教師の感動の率直な開示が子どもの自走への動機を倍加させる。**「ヴィンテージ」**というメタファーは、1日目を**1年間の最初の素材**として位置づけ直し、子どもに長期視点を与える。",
+    positive_count: 25,
+    photos: []
+  },
+  {
+    date: "2026-04-10",
+    subject: "国語・図工・道徳・学活",
+    class: "6年4組",
+    good: "「丸つけのレベル1〜5」を言語化し、自己評価の基準を明示。子どもの倫理感に訴える指導が秀逸。詩「準備」では同じ問いを3回読み直し、解釈を段階的に深化させた。図工の自画像では教師自身が動画で予習する姿を開示し、学び続ける大人のモデルを示した。",
+    improve: "教師の発話量が多く、語りが長くなる場面あり。指示の文型化（誰が・何を・どこへ）と、語りの3分制限ルールの導入が望ましい。",
+    growth: "教師：観察→記録→称賛のサイクルを確立。\n子ども：椅子運びを自走で完了。指示なしで分担して動ける状態に到達。",
+    independence: "主体性：係決めで子どもが自発的にアイデアを出し合った。\n自己調整：丸つけレベル1〜5の枠組みが提示された。\n協働：「目と耳と心で10倍聞く」を学級の合言葉に。",
+    next: "椅子運び等の指示を1文で出すルール化／聞くの実技化／丸つけレベル4の見本掲示／少数意見の制度化",
+    next_detail: `**1. 指示の文型化**
+「誰が・何を・どこへ・いつまでに」を**1文**にまとめてから話す。冗長な口語指示を減らす。
+
+**2. 「聞く」の実技化**
+「目と耳と心で10倍聞く」を*ペア活動*（30秒インタビュー）で1回試す。概念→体験へ。
+
+**3. 丸つけレベル4の見本化**
+分析メモのモデル例を1枚作って教室掲示。レベル3と5の差を可視化。
+
+**4. 少数意見の制度化**
+詩の解釈で「一人だけ違った子」を価値づけられたので、これを*継続的な仕組み*に。
+
+**5. 教師の発話量管理**
+1単元あたり*教師の話＝20分以内*を目安に。タイマー可視化を試す。`,
+    good_detail: `**1. 丸つけのレベル1〜5の言語化**
+教師の発話：
+> 一番良くない丸つけは何だと思いますか？...間違ってるのに丸する...自分のこと騙してる感じがしますよね
+
+レベル1：丸つけしない／レベル2：正確に丸つけ／レベル3：赤で直す／レベル4：間違いを言葉で分析／*レベル5：分析→練習までする*
+
+→ 自己評価の基準を**子ども自身の倫理感**に訴える形で言語化できた点が秀逸。
+
+**2. 詩「準備」（高階喜一）の3回読み直し設計**
+1回目「誰に呼びかけているか」→ 2回目で再考 → 3回目で全員音読。
+読みの**深まりが段階的**で、解釈の多様性を受容しつつ、最後に少数意見の児童を：
+> 相手に自分の意見をちゃんと主張できる人は大事だから、流されない
+と価値づけた。
+
+**3. 図工：自画像の指導改善**
+> 先生も昨日一発勉強して、この動画から勉強して...自撮り変えてみた
+
+教師自身の*学び続ける姿勢の開示*。「そっくりに描く必要はない／いつもの絵より上手に描けたらOK」とハードルを下げる導入も巧み。`,
+    improve_detail: `**指示の冗長さによる集中の散漫化**
+椅子運びの場面で：
+> 順番は適当でいいよ
+> どこていけばいいいる人から近くからどんどんいい
+
+このように指示が口語的で曖昧。**指示の核（誰が／何を／どこへ）を1文で出すと、6年生は自走できる**。
+
+**詩の場面での脱線**
+「失敗してもいい」の話が長くなり、教師自身が：
+> この辺喋るしたら先生あと1時間喋るけどいやめてください
+とセルフブレーキ。*主発問→児童間対話→集約*の時間配分を事前にタイマー化するとよい。
+
+**けテぶれのレベル3と5の混同リスク**
+レベル3（直すだけ）とレベル5（分析→練習）が「似てるけど違う」と教師自身が認めており、子どもが混同する可能性。**ビジュアル化と分析メモ例の提示**で定着が早まる。`,
+    growth_detail: `**教師の成長**
+- 名札に*百均の暗記カード*を取り付け、子どものいいところを瞬時にメモする工夫
+- 表情・声のトーン・声色まで意識して**全力で価値づけ**を伝える
+- *教科書配り*を「自分たちの学級を自分で作り上げる」最初の事実と位置づけた
+
+**子どもの成長（4/10時点）**
+- 始業式当日の段階で**移動が無言で足音だけ**しか聞こえない
+- 教科書配りを*7分以内で完了*（時間内達成）
+- 椅子運びは「下には安心して任せられる」と教師が言うレベルで自走
+- 自治の芽が新年度3日目に既に見えている`,
+    independence_detail: `**主体性**
+係決めで子どもがアイデアを出し合い、教師は「みんなが楽しくなければ係を変えてOK」と*自治の余地*を最大化。アイデアが重複した時：
+> 合体ってことにしようか
+と即興で承認した。
+
+**自己調整**
+- けテぶれ（計画→テスト→分析→練習）の枠組みを提示
+- 丸つけレベル1〜5で*自己評価の解像度*を引き上げた
+- プラス点制度で**100点を超えられる**仕組み
+
+**協働**
+- 「目と耳と心で10倍聞く」を学級の合言葉化
+- 「みんながお互いに聞けたらどうなる？」と**聞くを学び合いの基盤**に位置づけ
+- 喧嘩予防にまで接続：「相手の言ってることをちゃんと聞けば納得できる」`,
+    motivation: "🟢 やりたさが優勢な日。新年度3日目で意欲的な雰囲気。詩の解釈で多様な意見が出るなど能動的参加が観察された。",
+    motivation_detail: `**やりたさが高まった場面**
+- *係決め*でアイデアが次々出る：「インスタ係」「お助け係」など子どもからの提案
+- 図工の自画像で「**騙されたと思ってやってみて**」と教師が言うと、半信半疑ながら描き始める
+- 詩「準備」の解釈で「引きずるタイプ」「半々」など*多様な意見*が出る
+
+**やりたさが弱まった瞬間**
+- 図工の終盤で集中が散漫に：「ドラえもんやん」など雑談が増えた
+- 椅子運びの長い指示中に手が止まる子も
+
+**動機の波の特徴**
+始業式直後の高揚感がある一方、長時間の指示や説明で集中が落ちる典型的なパターン。**「自分で選べる場面」では動機が高い**のが共通点。`,
+    self_regulation: "丸つけのレベル1〜5を提示。自己評価の基準を子ども自身に問う構造を導入。「目標・方法の調整」の足場が築かれた。",
+    self_regulation_detail: `**観察された自己調整の4タイプ**
+
+🎯 **目標・方法の調整**
+- けテぶれの導入により、子どもが「何点取りたいか」「何を練習するか」を*自分で決める*構造ができた
+- プラスレ（プラス点練習）の説明で、「100点を超える」概念が提示された
+
+🤔 **試行錯誤**
+- 詩の解釈で「半々」と書いた子：自分の中で2つの解釈を保留する判断
+- 教師：「グルグル書いてて理由を書けばいい」と*揺れている思考*を価値づけ
+
+❤️ **感情を乗り越える**（萌芽）
+- 丸つけで「自分のこと騙してる感じがしますよね」と*自己誠実性*の概念を導入
+- まだ実践には至らないが、土壌が作られた
+
+⚡ **やりたくないが取り組む**
+- まだ顕在化していない（4月初頭で動機が高い時期のため）`,
+    transition: "教師の問いかけ「自由ってどんなもの？」「どっちのタイプ？」が子どもの自己調整への入り口になった。",
+    transition_detail: `**移行を支えた要因**
+
+🌱 **教師の問いかけ**
+- 「**自分のこと騙してる感じがしますよね**」→ 子どもが*自分の行動を内省*する瞬間
+- 詩の解釈で「もう一回読んでみて、変わるかも」→ *意見の更新*を促す問い
+
+🛠️ **環境設計（けテぶれ・丸つけレベル）**
+- 「丸つけのレベル1〜5」が*自己評価の語彙*を子どもに提供
+- 5段階という具体的な階段が、子どもの*次の目標*を可視化
+
+👥 **仲間との関係**
+- 「相手のことを思いやって発言する」と承認される少数意見の児童
+- *誰かの意見を聞いて自分の意見を変える*ことが価値づけられた`,
+    teacher_intervention: "👨‍🏫 環境設計と問いかけが中心の関わり。けテぶれ・丸つけレベルなど構造的装置を多数導入。",
+    teacher_intervention_detail: `**観察された教師の関わり4類型**
+
+❓ **問いかけ**
+- 「**今日は何しますか？**」（後の4/24で本格化、この日は萌芽）
+- 「自由ってどんなもの？」「どっちのタイプだと思う？」と開かれた問い
+- 答えを*子どもに作らせる*スタンス
+
+⏸️ **待つ・任せる**
+- 椅子運びで「順番は適当でいいよ」と*子どもの判断に任せる*
+- 教科書配りを*子どもが自分でやる*事実として位置づけた
+
+✨ **評価・承認**
+- 「効果（校歌）が上手」「移動が無言で足音だけ」など*行動の質*を承認
+- 「目を合わせてニコッてしてくれて嬉しい」と*情意*を承認
+
+🛠️ **環境設計**
+- けテぶれ／丸つけレベル1〜5／プラス点制度を*同日に複数導入*
+- 「目と耳と心で10倍聞く」を*共通言語*として確立`,
+    hypothesis: "**仮説**：新年度初週の高い動機を、**環境設計（けテぶれ・丸つけレベル）**と**評価の質（プロセス承認）**で「自己調整への足場」に変換できれば、動機が下がる時期にも学びが継続する基盤になる。",
+    positive_count: 30,
+    photos: []
+  },
+  {
+    date: "2026-04-17",
+    subject: "全教科（1週間総括）",
+    class: "6年4組",
+    good: "始業式から1週間の振り返り。「目と耳と心で10倍聞く」「けテぶれ」「＋れ」を導入。学級通信で4人の子の宿題写真を掲載、保護者にもけテぶれを浸透させた。火曜日の宿題が前日よりパワーアップする好循環が確立。",
+    good_detail: `**1. 1週間で構築された3つの土台**
+- *聞く*の指導：「目と耳と心で10倍聞く」を学級の合言葉化
+- *けテぶれ*の導入：算数で初実装→宿題（漢字）に展開
+- *＋れ*の創造：プラス点を取るための練習を子どもの語彙に
+
+**2. 学級通信の戦略的活用**
+> 4人の写真を載せて、こういうところがこういう風にいいんだって書きました
+
+→ 保護者と子ども両方への*個別承認*。**承認の連鎖サイクル**が確立。
+
+**3. パワーアップの好循環**
+> 2日目になって1日目よりパワーアップしてて、全体的にですね
+
+→ 月曜日の宿題が承認される → 火曜日にさらに頑張る、という*ポジティブフィードバックループ*が機能。
+
+**4. スペシャル問題の自作**
+> あのスペシャル問題作りましたって言って、なんか自分で漢字を調べて
+
+→ 子どもが*教師の枠を超えた*学びを始めた瞬間。**自己調整の最高峰**。`,
+    improve: "教師自身が「話しすぎ」を自覚済み。熱い話は3分まで、を子どもと約束する仕組みが必要。",
+    improve_detail: `**教師自身が認識している課題**
+> 先生は話しすぎちゃうんですね…で話すぎてみんなは疲れていく
+
+→ *自覚はある*ものの、システム化されていない。
+
+**改善の方向性**
+- 「熱い話は3分まで」を*子どもと共有するルール*にする
+- タイマーや砂時計で*可視化*する
+- 子どもが「もう短くしてOK」と言える権限を渡す
+
+**称賛軸の固定化リスク**
+学級通信に名前が出る子が偏る可能性。「観察対象を意図的にローテーション」する仕組みが必要。`,
+    growth: "教師：観察→記録→称賛のサイクル確立／自己開示の技術。\n子ども：宿題のパワーアップ／＋れを自発的に拡張する子の出現／スペシャル問題を自作する子の出現。",
+    growth_detail: `**教師の成長**
+- *暗記カード（百均）*の運用が定着：朝〜帰りまで子どものいいところを瞬時にメモ
+- *学級通信*を子ども成長の発信媒体に位置づけた
+- 自己開示の技術：「先生も話しすぎちゃう」と*自己の弱さを子どもに見せる*
+
+**子どもの成長**
+- 1週間で*宿題の質*が指数関数的に向上
+- ＋れを*教師の指示を超えて拡張*する子（10個書くなど）
+- *スペシャル問題*を自作する子の出現
+- 「夢中になる宿題」と表現する子（宮下清秀さん）`,
+    independence: "主体性：自学でスペシャル問題を作成する子。\n自己調整：＋れを拡張する子。\n協働：学級通信で互いを参照する文化。",
+    independence_detail: `**主体性**
+- *自学のスペシャル問題*：教師の課題を超えて、自分で問題を作って解く
+- ＋れの自発的拡張：1問→10問など、自分の判断で増やす
+
+**自己調整**
+- けテぶれの*計画→テスト→分析→練習*のサイクルが1週間で身についた
+- *自分の苦手を自分で潰す*意識が育っている
+
+**協働**
+- 学級通信を通じた*互いの参照*：他の子の頑張りを真似する
+- 「あの子のやり方、いいな」と*学び合い*が生まれている`,
+    next: "算数版けテぶれの分析テンプレ作成／写真記録の代替手段確保／称賛軸の多様化／教師の発話量タイマー化",
+    next_detail: `**1. 算数版けテぶれの分析テンプレ作成**
+漢字は誤答が見えやすいが、算数は*分析の難易度が高い*。「①計算ミス／②式の誤り／③問題文の読み落とし」などタグ化が必要。
+
+**2. 写真記録の代替手段確保**
+教室にスマホ持ち込み不可で、価値ある瞬間を逃している。*職員室管理のデジカメ*など低コスト解決を。
+
+**3. 称賛軸の多様化**
+学級通信に名前が出る子の偏りを防ぐ。週ごとに「テーマ」を変える運用。
+
+**4. 教師の発話量タイマー化**
+「3分ルール」を子どもとの約束として*ガラス張り*にする。`,
+    motivation: "🟢 1週間を通じて動機が高い水準で持続。子どもが教師の指示を超えて学びを拡張する*自発的な動機*が観察された。",
+    motivation_detail: `**やりたさが持続した要因**
+- *承認のサイクル*：宿題→学級通信掲載→翌日もっと頑張る
+- *子ども同士の参照*：他の子のスペシャル問題を見て「自分もやりたい」
+- *＋れによる「100点超え」*：天井のない達成感
+
+**動機の質的変化**
+- 始業式直後：先生に褒められたい
+- 1週間後：*自分のために*やる、*自分の課題を自分で*潰す
+→ **外的動機から内的動機への移行**の兆し。
+
+**特筆すべき場面**
+> あのスペシャル問題作りましたって
+
+→ 教師が指示していない*自発的な創造*。動機の質が完全に転換した瞬間。`,
+    self_regulation: "💡 全4タイプが観察された日。特に「目標・方法の調整」（けテぶれの自走）と「試行錯誤」（スペシャル問題）が顕著。",
+    self_regulation_detail: `**観察された自己調整の4タイプ**
+
+🎯 **目標・方法の調整**（最も顕著）
+- けテぶれの*計画*を自分で立てる
+- ＋れの*量と質*を自分で決める
+- *自学のテーマ*を自分で選ぶ
+
+🤔 **試行錯誤**
+- スペシャル問題の自作：*問題作り→解く→検証*のサイクル
+- ＋れで「どんな練習が効果的か」を試している子
+
+⚡ **やりたくないが取り組む**（萌芽）
+- 嫌いな漢字でも宿題でやってくる継続性
+- まだ「やりたくない」を表明する子は少ない
+
+❤️ **感情を乗り越える**
+- まだ顕在化していない（4月初頭で動機が高い時期）`,
+    transition: "💡 移行のキーは*学級通信での承認*。子どもが教師の枠を超えるたびに、それを言語化して全体に共有することで連鎖が起きた。",
+    transition_detail: `**移行を支えた要因**
+
+✨ **承認の連鎖**
+学級通信で4人を取り上げ → その子たちが翌日もっと頑張る → 他の子が真似する → さらに広がる
+→ *社会的学習理論*（Bandura）が機能している。
+
+🛠️ **環境設計**
+- けテぶれという*学習法のフレーム*が、子どもに「次に何をすればいいか」を示す
+- ＋れという*天井のない仕組み*が、上位層の動機を支える
+
+❓ **教師の問いかけ**
+- 「これは何をする時間？」を*子どもに問い続ける*
+- 「自分で必要なことを選ぶ」スタンスを*繰り返し言語化*
+
+⏸️ **教師の不介入**
+- 子どもが自発的にスペシャル問題を作るのを*待った*
+- 「やってもいい？」に「もちろん」と*許可だけを与えた*`,
+    teacher_intervention: "✨ 評価・承認（学級通信）と🛠️ 環境設計（けテぶれ・＋れ）が中心。子どもの自発性を待つ姿勢も顕著。",
+    teacher_intervention_detail: `**観察された教師の関わり4類型**
+
+✨ **評価・承認**（最も顕著）
+- *学級通信での個別承認*：4人の宿題写真を掲載
+- *本気の丸つけ*：星をいっぱい書く
+- 子どもの*プロセス*を細かく言語化して褒める
+
+🛠️ **環境設計**
+- けテぶれを宿題に展開（漢字→自学）
+- ＋れの概念導入で「天井のない達成」を設計
+- 学級通信を*承認の連鎖装置*として活用
+
+❓ **問いかけ**
+- 「これは何をする時間？」と*主体性を問う*
+- 「次は何をしたい？」と*選択*を促す
+
+⏸️ **待つ・任せる**
+- スペシャル問題の自作を*待った*
+- 「やってもいい？」に「いいよ」とだけ言って*詳細を任せた*`,
+    hypothesis: "**仮説**：**承認の連鎖サイクル**（個別承認→翌日のパワーアップ→集団への波及）が機能すると、子どもは外的動機（褒められたい）から内的動機（自分のために学ぶ）へと移行する。これを支えるのは*評価の質*と*環境の天井のなさ*。",
+    positive_count: 25,
+    photos: []
+  },
+  {
+    date: "2026-04-22",
+    subject: "図工・算数・国語・道徳",
+    class: "6年4組",
+    good: "教師が30分不在の間、自クラスは黒板の指示だけでけテぶれを使って自走できた（最大の成果）。給食事故を機に「心マトリクス（お花畑/月/太陽/ブラックホール）」を導入。即日「本を読む選択」という具体行動に反映された。",
+    improve: "心マトリクスの4象限が比喩過多で、子どもが象限を取り違える可能性。各象限の1行定義を掲示物に併記すべき。",
+    growth: "教師：指導法を改める柔軟性／タイミングを読む力。\n子ども：教師不在で30分自走可能／心マトリクス導入後、本を読む選択が増えた。",
+    independence: "主体性：教師不在で自走／給食準備の先回り。\n自己調整：けテぶれで学習法を選ぶ／心マトリクスで状態を見立てる。\n協働：おかわり場面の事故を全体で振り返る。",
+    next: "「嫌だな」と言った子の聞き取り／心マトリクスに1行定義を追加／学年展開はリクエスト待ち／意図的な「教師不在時間」の設計",
+    good_detail: `**1. 教師不在30分での自走（本日最大の成果）**
+体調不良の子の保護者連絡で、教師は別クラスに15〜20分遅刻。自クラスには黒板に指示だけ残した：
+> 教科書何ページの復習をやる、下に米印でけテぶれでやる…ドリルをやる、必ず分析練習しましょう、テストに向けて静かに自分の力で取り組みましょう
+
+戻った時：
+> 入った瞬間、みんなすごいなって言って。こんな自分たちの力でここできるのかっていうもう本当に喜びました。**めちゃくちゃ嬉しかった**
+
+→ 自立学習者育成の*4条件*が全て成立した瞬間：
+1. 教師がいなくても
+2. 学習法（けテぶれ）を使って
+3. 集中して
+4. 自分のペースで進める
+
+**2. 心マトリクスの戦略的投入**
+給食でこぼした事故を機に、掲示してあった心マトリクスを*初本格運用*：
+> 使うタイミングを伺ってたんですけど、ちょうどタイミングが来たな
+
+【4象限】
+- お花畑：友達と仲良くだけど考えてない／流される
+- 月：自分で考えて自分で動く（個）
+- 太陽：相手を信じて思いやる行動（協働）
+- ブラックホール：紙飛行機など良くない方向
+
+**3. 即日効果の検証**
+昼休み前に：
+> 今日はやっぱその月ゾーンを意識しようと言ったので、何人かが本を読んでいました
+
+教師は即座に「本を読むのはまさに自分の時間→好きゾーン」と価値づけ。**フレームワークが具体行動に紐づいた瞬間**を逃さず承認。`,
+    improve_detail: `**心マトリクスの比喩過多リスク**
+4象限の「太陽」「月」「お花畑」「ブラックホール」が比喩で表現されており、子どもが*象限を取り違える可能性*。
+- 各象限の**1行定義**を掲示物に併記する
+- 例：「お花畑＝楽しいけど自分で動けてない」「月＝自分で考えて自分で動く」
+
+**自由進度に「嫌だな」と言った子のフォロー**
+国語「帰り道」での自由進度予告に対して：
+> やったーっていう子もいたりとか、え嫌だなって聞いた子もいた
+
+「嫌だな」の*具体的な不安*（一人でできるか／友達と離れるのが嫌など）をヒアリングする時間が必要。
+
+**学年への展開の急ぎすぎリスク**
+放課後の学年会で*ケテぶれを学年に提案*する動き。転任初年度は「相手から聞かれたら渡す」スタンスが安全。`,
+    growth_detail: `**教師の成長**
+- 指導法を改める柔軟性（風景画指導で「描いてごらん」→「教えてから描かせる」）
+- 心マトリクスを*準備しておき、最適な瞬間に投入*する戦略眼
+- 不在テストを意図せず実施し、自クラスを信頼して任せた
+- *学年展開を視野*に入れた発言が出始めた
+
+**子どもの成長**
+- 教師不在で30分間けテぶれで自走可能に
+- 給食準備が*学校で3番目に早い*集団になっている
+- 心マトリクス導入後、「本を読む選択」が即日反映
+- 国語の作業を5分で1項目完了できる質に到達`,
+    independence_detail: `**主体性**
+- 教師不在で自走／給食準備の先回り
+- 心マトリクスで「自分の今の状態」を選択
+
+**自己調整**
+- けテぶれで学習法を選ぶ
+- *月と太陽の使い分け*を意識し始めた
+
+**協働**
+- おかわり場面の事故を全体で振り返る
+- 太陽象限の導入準備が整った
+
+**メタ認知ツールの獲得**
+心マトリクスは「自分の状態を自分で見立てる」ためのメタ認知ツール。これは*自立学習者の中核スキル*。教師の語り：
+> 1年間かけて自分の動かし方っていうのを身につけていきましょう`,
+    next_detail: `**1. 「嫌だな」と言った子への個別ケア**
+昼休みに30秒の個別声かけ。何が不安かを言語化させる。これだけで5月の自由進度移行成功率が大幅に上がる。
+
+**2. 心マトリクスに1行定義を追加**
+4象限それぞれに*子どもが家で言える1行*を加筆。
+
+**3. 学年展開は「相手のリクエスト待ち」**
+学年主任にノートのコピーを1冊渡し、「興味あればいつでも」と一言添えて待つ。提案は控える。
+
+**4. 教師の不在を意図的に作る**
+今日は偶然だったが、「先生は職員室にいるので質問があれば来てください」を*週1で計画的に実施*し、自走力を訓練する。
+
+**5. 図工の手本問題**
+苦手領域は*動画教材を教師の手本と並列*で見せる。「先生の手本＋プロの手本」の二段構え。`,
+    motivation: "🟡 動機の波がある日。給食事故で「ふわふわ」状態が発生したが、心マトリクス導入後に「月ゾーン」を選ぶ子が出現した。",
+    motivation_detail: `**やりたさが弱まった瞬間：給食事故**
+おかわりじゃんけん中に走ってぶつかり、給食をこぼす事故。教師の観察：
+> ふわふわしてる感じがして…楽しく喋りしてる人がふわふわしてますね
+
+→ *友達と仲良く楽しい*けれど*自分で考えていない*状態。これが「お花畑」象限の典型例。
+
+**やりたさが回復した瞬間：別クラス算数の自走**
+教師不在30分でも、子どもたちは黒板の指示だけで集中して取り組んだ。これは「やりたさ」というより**「自分でやる充実感」**。動機の質が変化している。
+
+**動機の波の特徴**
+- 場面によって動機が大きく揺れる（給食ふわふわ ⇄ 算数集中）
+- 教師の*意識的な投入*（心マトリクスの語り）で集団全体の状態を移行できる
+- 即日「本を読む選択」という*行動の変化*が現れた`,
+    self_regulation: "💡 4タイプすべてが観察された画期的な日。特に「目標・方法の調整」（教師不在の自走）と「感情を乗り越える」（心マトリクス）が顕著。",
+    self_regulation_detail: `**観察された自己調整の4タイプ**
+
+🎯 **目標・方法の調整**（最も顕著）
+- 教師不在30分で、黒板の指示だけで*けテぶれを使った自走*
+- 「全員打った」「プラスレ書いた子」など*自分で必要な練習*を選んだ
+- 子どもの行動：「学びの方をちゃんと意識して勉強していました」（教師の言葉）
+
+⚡ **やりたくないが取り組む**（萌芽）
+- 教師不在中、誘惑があっても*学習に向かい続けた*
+- 「テストに向けて」という*目的意識*が動機を支えた
+
+❤️ **感情を乗り越える**（心マトリクス導入の中核）
+- 給食でこぼした子：恥ずかしさ／申し訳なさを乗り越えて謝罪
+- 心マトリクスで*ふわふわから月ゾーンへの移動*を意識的に選択
+- 即日：本を読む選択をした子が複数
+
+🤔 **試行錯誤**
+- 給食事故を振り返って「なぜこうなったか」を集団で考えた
+- 「次どうすれば」を自分で言語化する子が出現`,
+    transition: "💡 移行の決定的瞬間：心マトリクスの戦略的投入。教師の語りが子どもに「自分の状態を見立てる語彙」を与えた。",
+    transition_detail: `**移行を支えた要因**
+
+🛠️ **環境設計：心マトリクスの戦略的投入**
+教師は数日前から心マトリクスを掲示していたが、*使うタイミングを伺っていた*：
+> 使うタイミングを伺ってたんですけど、ちょうどタイミングが来たな
+
+事故という*強い情動的瞬間*を捉えて投入したことで、子どもの記憶に残った。
+→ 即日「本を読む選択」という*具体行動への翻訳*が成功。
+
+⏸️ **教師の不介入：別クラス算数の30分**
+意図せず生まれた*教師不在の時間*が、結果的に**自己調整の検証実験**になった。
+> 入った瞬間、みんなすごいなって言って…めちゃくちゃ嬉しかった
+
+→ 教師の不在によって*子ども自身の自己調整力*が顕在化。
+
+✨ **プロセスへの承認**
+> 学びの方をちゃんと意識して勉強していました
+
+「ただやってる」のでなく*「学び方を選んでやってる」*ことを言語化して承認。`,
+    teacher_intervention: "🛠️ 環境設計（心マトリクス）と⏸️待つ・任せる（教師不在30分）の両方が同日に機能。タイミングの読みが秀逸。",
+    teacher_intervention_detail: `**観察された教師の関わり4類型**
+
+❓ **問いかけ（事故後の振り返り）**
+- 「なんでこうなったと思う？」と原因を*子どもに問わせた*
+- 「お花畑にいる人いるんじゃないかな」と*自己診断*を促した
+
+⏸️ **待つ・任せる（最大の特徴）**
+- 別クラス算数で30分の*意図せざる不在*を、結果的に「子どもへの信頼の表明」に変換
+- 自クラスへの戻り際：「自分たちの力でここできるのか」と*事後の価値づけ*
+
+✨ **評価・承認**
+- 「**めちゃくちゃ嬉しかった**」と*教師の感情を率直に開示*
+- 「学びの方を意識していた」と*プロセスの質*を承認
+
+🛠️ **環境設計（心マトリクスの戦略的投入）**
+- *タイミングを待つ*戦略：強い情動的瞬間（給食事故）に投入
+- 4象限の*メタ認知ツール*として位置づけ
+- 「ちょこちょこ使うパターンよりも、最初に1回どんと使う」という戦略`,
+    hypothesis: "**仮説**：心マトリクスのような**メタ認知ツール**は、強い情動的瞬間に投入することで、子どもが*自分の状態を見立てる語彙*として身体化する。**やりたさが消えた瞬間にも自己調整が働く**条件は、①状態を表す語彙、②その語彙への共通理解、③具体行動への翻訳ルート、の3つ。",
+    positive_count: 22,
+    photos: []
+  },
+  {
+    date: "2026-04-24",
+    subject: "学級経営・算数",
+    class: "6年4組",
+    good: "「何ページですか」を「今日は何しますか」に置き換える指導が秀逸。けテぶれ2周回し（教科書→自分で）の構造を提示。心マトリクスの「太陽」象限を本格導入し、協働を主体性の中に組み込んだ。",
+    good_detail: `**1. 言葉の置き換えによる主体性の喚起**
+教師の発話：
+> 何ページですじゃなくて、**今日は何しますか**っていう小さな意識の積み重ね
+
+→ 言葉を変えるだけで*主体性のベクトル*が180度変わる。極めて精度の高い指導論。
+
+**2. けテぶれ2周回しの設計**
+- 1周目：教科書の問題で計画→テスト→分析→練習
+- 2周目：自分で考えて回す（ドリル／苦手潰し／＋れ／自作問題）
+
+→ *共通の足場*から*個別最適*へと展開する2段構造。
+
+**3. 太陽象限の本格導入**
+> 友達にわからない問題があるからって聞く人もいますよね…相手を信じて思いやってる行動、それを太陽と言います
+
+→ **個（月）と協働（太陽）を等価に扱う**枠組みが完成。
+
+**4. スキル定着の証拠**
+> 問題見なくても勝手に手が動く
+
+天対称プリントを7枚やった子の発言。**反復による身体化**＝スキル定着の最高峰。`,
+    improve: "計画チェックの物理的負荷が高い。週2〜3回に絞るか、付箋で優先順位をつける効率化が必要。",
+    improve_detail: `**計画チェックの負荷**
+全員の計画を1時間でチェックすると、教師の歩行密度が高くなりすぎる。
+
+→ 改善策：
+- 5人ずつ違う色の付箋で*優先順位*をつける
+- 週2〜3回に絞る
+- 子ども同士で*ペアチェック*の仕組みを作る
+
+**録音忘れの自覚**
+> 今日の授業で話したことをしっかり録音すればよかった
+
+→ 朝のボイスメモ起動を*ルーティン化*すべき。`,
+    growth: "教師：「子どもの力を止めない／伸ばす責任」という哲学に到達。\n子ども：給食準備が学校で3番目に早い／けテぶれ2周可能／太陽の意味を理解。",
+    growth_detail: `**教師の成長**
+> この子たちの力をこれ止めたりとかばせなかったりしたら、これは僕の責任だな
+
+→ **「教師の役割は伸ばすこと、止めないこと」**という哲学に到達。
+
+**子どもの成長**
+- 給食準備が*学校で3番目に早い*
+- けテぶれを*2周回せる*ようになった
+- 太陽象限の意味を理解し、*友達に聞く時の気遣い*ができる
+- 配り物が*教師の指示前に*完了する`,
+    independence: "主体性：「何ページ」を「何しますか」へ／給食5分前準備。\n自己調整：けテぶれ2周回し／2軸振り返り。\n協働：太陽象限の明示化により、友達に聞くが価値ある選択に。",
+    independence_detail: `**主体性**
+- 「何ページ」→「何しますか」の転換で*意思決定の主体*が変わった
+- 給食5分前準備が*指示なし*で完了
+
+**自己調整**
+- けテぶれ*2周回し*が定着
+- 振り返りの2軸（学習内容＋取り組み方）が明確に
+
+**協働**
+- 太陽象限の明示化で*友達に聞く*が価値ある選択になった
+- 「相手を信じて思いやる」が学級の言語に`,
+    next: "「録音ボタン」をルーティン化／配り係への先生チェック日サイン／心マトリクスに太陽の例を追記／2軸振り返りのテンプレ化",
+    next_detail: `**1. 「録音ボタン」をルーティン化**
+朝のボイスメモ起動で*自己改善資料*を蓄積。
+
+**2. 配り係への先生チェック日サイン**
+振り返りや重要なノートは*教師がチェック*する印を導入。
+
+**3. 心マトリクスに太陽の例を追記**
+「友達が今聞いても大丈夫か確認してから聞く」など*具体例*を1行ずつ追記。
+
+**4. 2軸振り返りのテンプレ化**
+ノートの裏表紙に「①今日の学び／②今日の自分の動かし方」を印刷。`,
+    motivation: "🟡 朝の校歌で疲労感（「みんなの疲れ去っちゃった」）あり。算数では月＋太陽の集中状態が観察された。動機の波あり。",
+    motivation_detail: `**やりたさが弱まった瞬間：朝の校歌**
+> なんか元気でないな先生の気持ちはわかるけど
+
+→ 教師自身が*疲労を口にする*瞬間。3週連続の高密度指導の影響が出始めた可能性。
+
+**やりたさが回復した瞬間：算数の月＋太陽**
+> 月と太陽が上手にこの中で漂っているこの学習空間はものすごく賢く学んでいる
+
+→ 個と協働が同時に機能。**動機の質的変化**が見える。
+
+**＋れの拡張：「夢中になる宿題」**
+宮下清秀さんが*分析で夢中になる宿題*と書いた。
+→ 動機が*没頭*の段階に達した。`,
+    self_regulation: "💡「目標・方法の調整」（けテぶれ2周回し）と「協働的自己調整」（太陽の選択）が顕著。",
+    self_regulation_detail: `**観察された自己調整の4タイプ**
+
+🎯 **目標・方法の調整**（最も顕著）
+- けテぶれ*2周回し*：教科書→自分で
+- 計画チェックを通じた*目標の具体化*
+
+🤔 **試行錯誤**
+- 7枚の天対称プリントを繰り返した子：*量的試行錯誤*でスキルを身体化
+- 「問題見なくても勝手に手が動く」状態に到達
+
+❤️ **感情を乗り越える**
+- 心マトリクスの月＋太陽の組み合わせを*意識的に選ぶ*
+
+⚡ **やりたくないが取り組む**
+- 苦手な問題でも友達に聞きながら*継続*
+- 太陽（友達に聞く）が*諦めない選択肢*として機能`,
+    transition: "💡 移行のキー：教師の言葉の置き換え（「何ページ」→「何しますか」）と、太陽象限の意味づけ。",
+    transition_detail: `**移行を支えた要因**
+
+❓ **教師の問いかけの転換**
+「何ページですか」→「何しますか」の*180度の方向転換*。
+これだけで子どもが*意思決定の主体*になる。
+
+🛠️ **環境設計**
+- けテぶれ2周回しという*入れ子構造*：型→個別最適
+- 太陽象限の*独立化*：協働を主体性の中に位置づけた
+
+✨ **承認**
+- 計画を*歩き回りながら見て価値づける*
+- 「苦手を潰す」「やり直す」を即座に承認`,
+    teacher_intervention: "🛠️ 環境設計（けテぶれ2周回し・太陽象限）と❓ 問いかけの転換が中核。⏸️ 待つ姿勢も顕著。",
+    teacher_intervention_detail: `**観察された教師の関わり4類型**
+
+❓ **問いかけ**（最も特徴的）
+- 「何ページ」→「**何しますか**」の置き換え
+- 計画段階で「これでいい？」と*個別に問いかけ*
+
+⏸️ **待つ・任せる**
+- 給食「僕が声かけないようにしようと思って我慢してる」
+- 5分前準備が完了するまで*待つ*
+
+✨ **評価・承認**
+- 計画チェックで*個別に価値づけ*
+- 月と太陽の組み合わせを*学級全体に承認*
+
+🛠️ **環境設計**
+- けテぶれ2周回しの*入れ子構造*
+- 太陽象限の*独立した位置づけ*`,
+    hypothesis: "**仮説**：教師の*言葉の置き換え*（「何ページ」→「何しますか」）は、子どもの主体性の方向を瞬時に転換できる。これは**最小コストの最大効果介入**であり、自己調整の入り口を作る。",
+    positive_count: 18,
+    photos: []
+  },
+  {
+    date: "2026-04-27",
+    subject: "国語・算数・道徳",
+    class: "6年4組",
+    good: "自己採点の倫理を「自分への嘘は最大の敵」に深化。嘘をついた児童に「書き換える前に消してくれた、嬉しかったね」と承認＋関係修復。道徳「自由」では子どもが「自由には責任が伴う」を自力で言語化。",
+    good_detail: `**1. 自己採点の倫理深化**
+教師の発話：
+> 自分に嘘ついてますよね。それ一番嫌いって。**自分に嘘つくんですよ**
+
+→ 4/10の「丸つけレベル1〜5」→ 4/22「ごまかし／厳しすぎ」→ 4/27「**自分への嘘**」へと*3段階深化*。
+
+**2. 嘘をついた子への個別対応**
+> あなたが学んだことは何ですか
+> 他のところも勝手に書き換えたんじゃないかなって思っちゃう先生がいる
+> **書き換える前に消してくれた、嬉しかったね**
+
+→ 責めるのではなく*信頼が傷つくことの説明*＋*直前の自己修正を承認*。極めて高度な指導。
+
+**3. 「自由」の探究授業**
+6年生に「自由ってどんなもの？」と*哲学的問い*を投げた。
+
+子どもが到達した結論：
+> ある程度のことを守らなければ、自由を本当の自由にはできない
+
+→ **子どもが自力で哲学的命題に到達**。`,
+    improve: "嘘をついた子の気持ちの収束まで届いたかが不明。翌日の声かけが必須。",
+    improve_detail: `**個別対応のフォローアップ不在**
+嘘をついた子の*気持ちの収束*まで届いたかが録音から不明。
+→ **翌日の声かけが必須**。「昨日のこと、引きずってない？」と1分の確認。
+
+**「自由」授業の理解差**
+教師自身が認識：
+> 結論が豊かにできているかは、ノートを見た感じじゃまあ分かる子もいた、わからなかった子もいた
+
+→ 理解できなかった子への*補講または個別声かけ*が必要。`,
+    growth: "教師：個別倫理実践と集団哲学探究を同日に実施できる成熟。\n子ども：「言葉が軽い」など高度な分析発言／少数意見も主張できる。",
+    growth_detail: `**教師の成長**
+*個別の倫理実践*（嘘事件）と*集団の哲学探究*（自由授業）を同日に実施できる成熟。これは**指導の多層性**。
+
+**子どもの成長**
+- 「**言葉が軽い**」など高度な分析発言（中学校〜高校国語レベル）
+- 少数意見も主張できる関係性
+- *自分への嘘*という抽象的命題を理解できる`,
+    independence: "主体性：「自由」を子ども自身が定義／嘘をついた子の自己修正。\n自己調整：テスト予行演習で自分のレベルを測る。\n協働：友達に聞く時も気遣う関係。\n倫理：自分への嘘＝最大の敵。",
+    independence_detail: `**主体性**
+- 「自由」を子ども自身が*再定義*
+- 嘘をついた子の*自己修正*（書き換える前に消した）
+
+**自己調整**
+- テスト予行演習で*自分のレベルを測る*
+- 「自由には責任」を*行動の選択*につなげる
+
+**協働**
+- 友達に聞く時も*気遣う*関係性
+- 少数意見が*尊重される*文化
+
+**倫理**（新しい次元）
+- *自分への嘘＝最大の敵*
+- 自由には*責任*が伴う`,
+    next: "嘘をついた児童への翌日声かけ／「自由」授業の続編設計／テスト後の振り返りプロトコル／教師の語り総量の管理",
+    next_detail: `**1. 嘘をついた子への翌日声かけ**
+教室入り口で「**昨日の話、わかってくれてありがとう**」と1分。関係修復は早いほど良い。
+
+**2. 「自由」授業の続編**
+学級内の具体場面で再考：「給食でおかわりじゃんけんする自由」「友達と話す自由」など。
+
+**3. テスト後の振り返りプロトコル**
+点数でなく*ケテブレが回せたか／予行で見つけた課題に対応できたか*を3問で振り返る。
+
+**4. 教師の語り総量管理**
+1日に深い語りは**最大2つまで**を目安に。`,
+    motivation: "🟢 道徳「自由」で「頭おかしくなるぐらい考えた」と子どもが言うほど高まった日。算数小テストでも12人がプラス点に挑戦。",
+    motivation_detail: `**やりたさが最高潮になった瞬間：道徳「自由」**
+> 道徳でこんなに考えたの初めて
+> 脳に汗が出る
+
+→ 子どもの発言。**思考量への没頭**＝動機の最高峰。
+
+**プラス点への挑戦：12人**
+クラスの3分の1が*教師の指示を超えた挑戦*に向かった。
+
+**動機の質的変化**
+動機が「楽しい／面白い」から*「考えたい／挑戦したい」*へと深化。`,
+    self_regulation: "💡 倫理的自己調整（嘘事件）と哲学的探究（自由授業）が同日に観察された画期的な日。",
+    self_regulation_detail: `**観察された自己調整の4タイプ**
+
+❤️ **感情を乗り越える**（最も顕著）
+- 嘘をついた子の*書き換える前に消した*瞬間
+- ごまかしたい衝動を*自分で抑制*
+- これは**倫理的次元**での自己調整
+
+🤔 **試行錯誤**（哲学的）
+- 「自由」の概念を*子ども自身が定義*しようとする
+- 「自由＝なんでもあり」→「自由＝責任を伴う」へと*意見を更新*
+
+🎯 **目標・方法の調整**
+- テスト予行演習で*自分のレベルを把握*
+- ＋れの量を*自分で決める*
+
+⚡ **やりたくないが取り組む**
+- プラス点に挑戦することへの*心理的ハードルを乗り越えた*12人`,
+    transition: "💡 移行の核：教師の倫理的言語化（自分への嘘）と、哲学的問い（自由ってどんなもの？）。",
+    transition_detail: `**移行を支えた要因**
+
+❓ **教師の問いかけ**
+- 「**自由ってどんなもの？**」という*概念定義から探究*させる問い
+- 嘘をついた子に「**あなたが学んだことは何ですか**」
+
+✨ **承認**
+- 「**書き換える前に消してくれた、嬉しかったね**」
+- 「相手に自分の意見を主張できる人は大事」と*少数意見*を価値づけ
+
+🛠️ **環境設計**
+- 「自分への嘘」を*学級の倫理基準*として明示
+- 「自由には責任」を*行動の判断基準*に
+
+⏸️ **待つ**
+- 「自由」の結論を*子どもが自力で導く*まで待った`,
+    teacher_intervention: "❓問いかけ（哲学的）と✨評価・承認（倫理的）が中心。個別倫理実践と集団哲学探究を同日に成立させた。",
+    teacher_intervention_detail: `**観察された教師の関わり4類型**
+
+❓ **問いかけ**（哲学的）
+- 「自由ってどんなもの？」（概念定義）
+- 「あなたが学んだことは何ですか」（個別の自省）
+
+✨ **評価・承認**（倫理的）
+- 「書き換える前に消してくれた、嬉しかったね」（自己修正の承認）
+- 「主張できる人は大事」（少数意見の価値づけ）
+
+⏸️ **待つ・任せる**
+- 「自由」の結論を*子どもに任せる*
+- 答えを与えず、*探究の時間を確保*
+
+🛠️ **環境設計**
+- 自己採点の倫理化（「自分への嘘」）
+- 自由＝責任を伴う、という*行動規範*の言語化`,
+    hypothesis: "**仮説**：自己採点の*倫理的次元*（自分への嘘）への深化は、自己調整学習の最終到達点である。技術（けテぶれ）→倫理（誠実性）→哲学（自由には責任）の3層構造が、子どもの自己調整を*質的に*高める。",
+    positive_count: 18,
+    photos: []
+  },
+  {
+    date: "2026-04-28",
+    subject: "国語・算数・学級活動",
+    class: "6年4組",
+    good: "学級目標「希望永続 / One for all, All for one」が決定。子ども提案による民主的合意形成プロセスが模範的。算数本テスト平均93点、100点取得者19人、最高215点という客観成果。学級通信解説で7名以上の個別承認の連鎖。",
+    good_detail: `**1. 学級目標「希望永続」の決定プロセス**
+ゆうなさん（推定）が*四字熟語を多数調べてきた*。
+- 4つの候補に絞られる
+- 一度「合体四字熟語」案
+- 子どもの異論：「**意味が覚えられないんじゃない**」
+- 教師「確かに」と即座に受容
+- ゆうなさんの再提案：「**希望永続**」が4要素を全て含む
+
+→ **異論受容→修正の流れが模範的**。集合的試行錯誤の成立。
+
+**2. 算数本テストの客観成果**
+- 自クラス平均：**93点**
+- 100点取得者：**19人**（クラスの約2/3）
+- プラス点挑戦：**12人**（クラスの1/3）
+- 最高得点：**215点**
+
+→ **指導モデルの再現性が客観的に証明**。
+
+**3. 学級通信解説で7名以上の個別承認**
+1人ずつ取り上げて全体に紹介。
+→ **個別承認の連鎖**が学級全体の動機エンジンに。`,
+    improve: "学級目標決定が一人の子の準備に依存。次回は全員が事前準備してくる仕掛けが必要。",
+    improve_detail: `**過度な依存リスク**
+ゆうなさんがいなかったら学級目標決めが成立しなかった可能性が高い。
+
+→ 改善策：
+- 次回（行事スローガン等）では*全員が事前準備*してくる仕掛け
+- 「考えてくる宿題」を出す
+- 班ごとに案を持ち寄る形式
+
+**「希望永続」の意味の共有度**
+教師自身が初耳で、子どもの中でも理解度に差。
+→ *毎週月曜の朝に1分*意味確認。`,
+    growth: "教師：「教室にいる時間は楽しい」と言える状態に到達／自己効力感の確立。\n子ども：学級目標を子どもが提案・決定／プラス点12人挑戦。",
+    growth_detail: `**教師の成長**
+> 教室にいる時間は楽しい
+
+→ **「証明フェーズ」から「享受フェーズ」**への心理的移行。
+
+**子どもの成長**
+- *学級目標を子どもが提案*できる関係性
+- 算数で平均93点、100点19人という*高水準*
+- プラス点挑戦が*クラスの1/3*に到達`,
+    independence: "主体性：ゆうなさんが学級目標を考えてくる／予習が複数の子に広がる。\n自己調整：大分析でテストを学習プロセスに転換／2周回しが定着。\n協働：学級通信で互いを参照する文化／個別承認の連鎖。",
+    independence_detail: `**主体性**
+- ゆうなさんの*事前準備*（四字熟語調査）
+- *合体案を棄却する判断*（教師の判断にも異論）
+
+**自己調整**
+- 大分析でテストを*学習プロセスに転換*
+- 2周回しが*定着*
+
+**協働**
+- 学級通信で*互いを参照*する文化
+- *個別承認の連鎖*が学級文化に`,
+    next: "学級目標の合意形成プロトコル整備／「言葉が軽い」発言児童の継続発見／プラス点参加率向上キャンペーン",
+    next_detail: `**1. 学級目標の合意形成プロトコル整備**
+- 候補を3つに絞る（投票）
+- 「これは何を大事にしたい言葉か」を各候補で30秒語る
+- 最終投票
+
+の流れで*30分で決着*できる設計。
+
+**2. 「言葉が軽い」発言児童の継続発見**
+鋭い分析発言を*継続的に光らせる*仕掛け。
+
+**3. プラス点参加率向上キャンペーン**
+「全員が1個プラス点を書く」を次回テストの学級目標に。書き方の例を5個掲示。`,
+    motivation: "🟢 学級目標決めで子どもが「疲れるぐらい考えた」と教師が言うほど高い動機。算数テストでも100点19人と高水準。",
+    motivation_detail: `**やりたさが持続した1日**
+- 学級目標決めで*1時間ぶっ続け*の議論
+- 「**疲れるぐらい考えた**」と教師が振り返る
+- 算数テストで100点19人＝*クラスの2/3*が到達
+
+**動機の質：「考えたい」「決めたい」**
+従来の「楽しい／面白い」を超えて、*意思決定への参加*そのものが動機源に。
+
+**プラス点12人の意味**
+クラスの3分の1が*天井のない挑戦*に向かった。
+→ 内的動機の*成熟*。`,
+    self_regulation: "💡「目標・方法の調整」（学級目標の合意形成）と「集合的自己調整」（合体案の棄却）が顕著。",
+    self_regulation_detail: `**観察された自己調整の4タイプ**
+
+🎯 **目標・方法の調整**（最も顕著）
+- *学級目標の決定*：4候補→合体案→希望永続へと方法を*更新*
+- 大分析でテストの*取り組み方*を分析
+
+🤔 **試行錯誤**（集合的）
+- 合体四字熟語案を*一度採用→棄却→新案*
+- これは**集合的試行錯誤**の成立
+
+⚡ **やりたくないが取り組む**
+- プラス点挑戦：12人がハードルを*乗り越えた*
+- 1時間ぶっ続けの議論を*耐え抜いた*
+
+❤️ **感情を乗り越える**
+- 議論で意見が割れても*結論に向かう*忍耐
+- 自分の案が採用されなくても*受け入れる*`,
+    transition: "💡 移行の核：教師の異論受容（「確かに」即答）と、子どもの提案を信じて待つ姿勢。",
+    transition_detail: `**移行を支えた要因**
+
+⏸️ **教師の異論受容**
+> いいんだけど、その意味が覚えられないんじゃない
+
+子どもの異論に対して*即座に「確かに」と受容*。
+→ **権威的でない大人**としてのモデル。
+
+❓ **問いかけ**
+- 「これらが繋がる1つの言葉を作れない？」
+- 「みんなどう思う？」と*合意を確認*
+
+✨ **承認**
+- ゆうなさんの提案を*全体で承認*
+- 「疲れるぐらい考えた」を*プロセス価値*として承認
+
+🛠️ **環境設計**
+- 学級目標を*子ども提案で決定*する場の設計
+- 学級通信解説で*個別承認の連鎖*装置`,
+    teacher_intervention: "✨評価・承認（学級通信7名以上）と⏸️待つ・任せる（学級目標を子どもに委ねる）が両輪で機能。",
+    teacher_intervention_detail: `**観察された教師の関わり4類型**
+
+⏸️ **待つ・任せる**（最も特徴的）
+- 学級目標を*1時間子どもに任せた*
+- 自分の判断（合体案）にも*異論を受け入れた*
+
+✨ **評価・承認**
+- 学級通信で7名以上を*個別名指し*
+- 「疲れるぐらい考えた」を*プロセスとして承認*
+
+❓ **問いかけ**
+- 「みんなどう思う？」「これでいい？」
+- 合意形成を*子どもに委ねる*問い
+
+🛠️ **環境設計**
+- 学級目標決定の*場の設計*
+- 学級通信を*承認連鎖装置*として運用`,
+    hypothesis: "**仮説**：教師が*異論を即座に受容する*と、子どもは*意思決定の主体*として育つ。学級目標のような*重要決定*を子どもに委ねることが、自己調整学習の集合的次元を作る。",
+    positive_count: 20,
+    photos: []
+  },
+  {
+    date: "2026-04-30",
+    subject: "算数・体育",
+    class: "6年4組",
+    good: "「試行錯誤」の漢字を分解し、けテぶれ＝試行錯誤の構造化として位置づけ。「算数の勉強しながら生きる力をつけてる」と教科を超えた学びを明示。GW前の「ご褒美宿題保留」判断で集団責任の概念を導入。",
+    good_detail: `**1. 「試行錯誤」の概念化**
+> 思考っていうのはやってみるってこと…誤りは間違い…**やってみる→考える→やってみる→考える**
+
+→ けテぶれ＝試行錯誤の構造化として位置づけ直し。
+
+**2. 「生きる力」への接続**
+> これは**一生使える力**…跳び箱の授業を教える方でも…**算数の勉強しながら生きる力をつけてる**
+
+→ **教科学習と人生スキルの統合**を6年生に明示。
+
+**3. 大分析の5要素フレーム**
+従来の「プラス・マイナス・矢印」に追加：
+- *びっくり*＝学んだこと（気づき）
+- *はてな*＝疑問
+- *星*＝成長
+
+→ メタ認知の解像度が一段上がった。
+
+**4. GW前「ご褒美宿題保留」判断**
+> 当たり前のことが積み重ねられてなかったら、信じることも難しくなる
+> お互いに声かけ合うことも大事
+
+→ **個人の責任を集団責任化**する指導。罰ではなく信頼の論理で説明。`,
+    improve: "試行錯誤の語源解説と「生きる力」への接続が6分の長い語りに。重要な概念ほど短く、具体例1つで十分なケースも。",
+    improve_detail: `**長い語りの自覚**
+> 熱く喋りすぎて今6分ぐらい経ちました
+
+→ 教師自身が認識済み。**重要な概念ほど短く、具体例1つで十分**なケースも。
+
+**ご褒美宿題保留の不公平感**
+真面目にやってきた子に「**真面目にやってきた人ありがとう**」と*併記*するとさらに丁寧。`,
+    growth: "教師：「教科を超えた生きる力」を明示できる教育観。\n子ども：算数100点取得者19人／プラス点12人挑戦／最高215点。",
+    growth_detail: `**教師の成長**
+*「教科を超えた生きる力」*を明示できる教育観に到達。新学習指導要領の「資質・能力」観そのもの。
+
+**子どもの成長**
+- 算数100点取得者：*19人*（クラスの2/3）
+- プラス点挑戦：*12人*
+- 最高得点：*215点*
+- テスト後に*全員筆が止まらない*練習`,
+    independence: "主体性：大分析で自己評価／プラス点12人挑戦。\n自己調整：試行錯誤の構造を理解／3要素＋2要素の分析。\n協働：「声かけ合う」が学級文化として明示。\n長期価値：算数を通じて生きる力。",
+    independence_detail: `**主体性**
+- 大分析で*自己評価*
+- プラス点12人挑戦＝*天井のない挑戦*
+
+**自己調整**
+- 試行錯誤の構造を理解
+- 大分析*5要素フレーム*の獲得
+
+**協働**
+- 「声かけ合う」が*学級文化*として明示
+- ご褒美宿題保留場面で*集団責任*が言語化
+
+**長期価値**
+- 算数を通じて*生きる力*
+- *教科を超えた学び*の意識化`,
+    next: "GW中の教師の完全休養／GW明け朝3分の概念再起動／文字と式の躓き対策プリント1枚／学級目標「希望永続」の運用設計",
+    next_detail: `**1. GW中の教師の完全休養**
+3週連続の高密度指導。GW中は*仕事を持ち帰らない時間を48時間以上*確保。
+
+**2. GW明け初日朝：3分の「思い出し時間」**
+- 「希望永続って何だっけ？」
+- 「けテぶれって何だっけ？」
+- 「月と太陽って何だっけ？」
+- 「試行錯誤って何だっけ？」
+
+**3. 文字と式の躓き対策プリント**
+具体数代入問題*10問*を1枚。GW明けに躓く子が出たら即配布。
+
+**4. 学級目標「希望永続」の運用設計**
+*週次の振り返り*に組み込む。お飾りにしない仕掛け。`,
+    motivation: "🟢🟡 全体的に高いがGW前の疲労感も。テスト後の「全員筆が止まらない」状態は動機の質的変化を示す。",
+    motivation_detail: `**やりたさが質的に変化した瞬間：テスト後の「筆が止まらない」**
+> 全員、筆が止まらないんですね。それぐらいもっと覚えようという熱があった
+
+→ テスト直後の*悔しさ／焦り*というネガティブ感情が、*けテぶれの「練習」フェーズ*に流れ込んだ。これは**動機の質的転換**。
+
+**やりたさが弱まった瞬間：朝の校歌**
+> なんか元気でないな先生の気持ちはわかるけど
+
+→ GW前の疲労感。教師も子どもも*ほぼ限界*。
+
+**動機の波の特徴**
+- ピーク（テスト後の練習）と谷（朝の校歌）が同日に共存
+- 教師の*仕組み*（けテぶれ）が谷でも学びを支えた`,
+    self_regulation: "💡 全4タイプが観察された日。特に「やりたくないが取り組む」（テスト後の練習）が顕著。",
+    self_regulation_detail: `**観察された自己調整の4タイプ**
+
+⚡ **やりたくないが取り組む**（最も顕著）
+- テスト後の*悔しさ*を練習に変えた*全員*
+- ご褒美宿題が出ない場面でも*お互いに声かけ合う*姿勢
+
+🎯 **目標・方法の調整**
+- 大分析*5要素*で自分の取り組みを言語化
+- プラス点12人＝*自分で挑戦の量を決める*
+
+🤔 **試行錯誤**
+- 試行錯誤の*概念そのもの*を学ぶ
+- 「やってみる→考える→やってみる」のサイクルを意識化
+
+❤️ **感情を乗り越える**
+- ご褒美が出ない不公平感を*集団責任の感覚*に転換
+- 「お互いに声かけ合う」を*受容*`,
+    transition: "💡 移行の核：教師の概念化（試行錯誤＝生きる力）と、悔しさを練習に変える仕組み（けテぶれ）。",
+    transition_detail: `**移行を支えた要因**
+
+🛠️ **環境設計（けテぶれ）**
+- テスト後の悔しさを*練習に流し込むルート*が確立
+- 「全員筆が止まらない」状態は*仕組みの勝利*
+
+❓ **教師の概念化**
+- 「試行錯誤＝けテぶれ＝生きる力」を*接続*
+- 算数を*教科を超えた学び*として位置づけ
+
+✨ **承認**
+- プラス点挑戦12人を*クラス全体で価値づけ*
+- 215点の子を*みんなで称賛*
+
+⏸️ **教師の判断**
+- ご褒美宿題保留＝*罰ではなく信頼の論理*
+- 集団責任を*子どもに考えさせる*`,
+    teacher_intervention: "🛠️ 環境設計（けテぶれ・大分析）と❓問いかけ（試行錯誤の概念化）が中心。教師の判断（ご褒美保留）も特徴的。",
+    teacher_intervention_detail: `**観察された教師の関わり4類型**
+
+🛠️ **環境設計**（最も顕著）
+- けテぶれを*試行錯誤の構造化*として再定義
+- 大分析*5要素フレーム*の提示
+
+❓ **問いかけ**（概念的）
+- 「試行錯誤って何？」と*漢字を分解*
+- 「これは何の力？」と*教科を超えた問い*
+
+✨ **評価・承認**
+- 「**頭おかしくなるぐらい考えた**」を*破格の承認*
+- プラス点挑戦を*クラス全体で価値づけ*
+
+⏸️ **待つ・任せる**
+- ご褒美宿題保留＝*子どもに考えさせる*
+- 「お互いに声かけ合う」を*子どもに委ねる*`,
+    hypothesis: "**仮説**：けテぶれは*悔しさ*や*面倒くささ*といったネガティブ感情を*学習エネルギー*に変換する装置である。これにより**やりたさが消えた瞬間にも自己調整が機能する**。教師の最大の役割は、感情を学びに転換する*ルートを設計*すること。",
+    positive_count: 15,
+    photos: []
+  }
+  // ★ 新しいデータはここに追加してください
+];
+
+/* 写真のカテゴリ */
+const PHOTO_CATEGORIES = [
+  "板書",
+  "宿題ノート",
+  "算数ノート",
+  "国語ノート",
+  "その他のノート",
+  "体育プリント",
+  "掲示物",
+  "教室",
+  "その他"
+];
+
+/* localStorage キー（ユーザーがアップロードした写真用） */
+const PHOTO_STORAGE_KEY = "classroom_dashboard_photos_v1";
+
+/* 画像圧縮設定 */
+const IMAGE_MAX_DIMENSION = 1280;  // 最大の辺をこのpxに収める
+const IMAGE_QUALITY = 0.82;         // JPEG品質（0〜1）
+
+/* ============================================================
+   画像圧縮関数
+   - Canvasに描画しなおして縮小＋JPEG変換
+   - 5MBの写真が通常200〜500KBになる
+   ============================================================ */
+async function compressImage(dataUrl, maxDimension = IMAGE_MAX_DIMENSION, quality = IMAGE_QUALITY) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      let { width, height } = img;
+      const longest = Math.max(width, height);
+      if (longest > maxDimension) {
+        const scale = maxDimension / longest;
+        width = Math.round(width * scale);
+        height = Math.round(height * scale);
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL("image/jpeg", quality));
+    };
+    img.onerror = reject;
+    img.src = dataUrl;
+  });
+}
+
+/* DataURL のおおよそのバイト数を推定 */
+function getDataUrlSize(dataUrl) {
+  // base64の "data:image/jpeg;base64,..." の後ろを取って、長さ×0.75で実バイト数
+  const base64 = dataUrl.split(",")[1] || "";
+  return Math.round(base64.length * 0.75);
+}
+
+/* ストレージ使用量（IndexedDBのキャッシュ値を返す） */
+function getStorageUsage() {
+  return cachedStorageUsage;
+}
+
+/* バイトを人間が読みやすい形に */
+function formatBytes(bytes) {
+  if (bytes < 1024) return bytes + " B";
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+  return (bytes / 1024 / 1024).toFixed(1) + " MB";
+}
+
+/* ============================================================
+   📌 状態管理
+   ============================================================ */
+let currentDate = new Date(2026, 3, 1);
+let selectedDate = null;
+let currentPeriod = "day";
+let activeCategory = "すべて";
+let photosExpanded = false;     // 写真ギャラリーの展開状態
+const PHOTOS_INITIAL_LIMIT = 4; // 初期表示枚数
+let expandedSections = new Set(); // 詳細展開しているセクションのID
+let expandedDrillDown = null;     // 期間ビューでタップして展開中の統計 {type, key}
+let currentRangeItems = null;     // ドリルダウンで参照する現在の期間アイテム
+
+/* セクションをHTMLに変換するヘルパー
+   - detail があればトグルボタンを表示
+   - detail内では **bold** や > 引用 などをマークダウン風に整形 */
+function renderSection(title, summary, detail, sectionId) {
+  const hasDetail = detail && String(detail).trim().length > 0;
+  const isExpanded = expandedSections.has(sectionId);
+  const toggleBtn = hasDetail
+    ? `<button class="detail-toggle-btn" data-section-id="${sectionId}">${isExpanded ? "▲ 閉じる" : "▼ 詳しく見る"}</button>`
+    : "";
+  const detailHtml = (hasDetail && isExpanded)
+    ? `<div class="section-detail">${formatDetailText(detail)}</div>`
+    : "";
+  return `
+    <div class="section">
+      <div class="section-title">${title}${toggleBtn}</div>
+      <div class="section-content">${summary}</div>
+      ${detailHtml}
+    </div>`;
+}
+
+/* ============================================================
+   ★ 動機×自己調整の研究視点ブロック
+   - 既存の motivation/self_regulation/transition/teacher_intervention
+     フィールドがあれば優先使用
+   - なければ既存テキストから自動抽出
+   ============================================================ */
+function renderResearchLensBlock(data) {
+  // 全テキストを結合（自動検出用）
+  const allText = [
+    data.good, data.improve, data.growth, data.independence, data.next,
+    data.good_detail, data.improve_detail, data.growth_detail,
+    data.independence_detail, data.next_detail
+  ].filter(Boolean).join(" ");
+
+  // ① 動機（やりたさ）の状態を自動推定
+  const motivationAutoText = data.motivation || autoDetectMotivation(allText);
+  const selfRegAutoText = data.self_regulation || autoDetectSelfRegulation(allText);
+  const transitionAutoText = data.transition || autoDetectTransition(allText);
+  const interventionAutoText = data.teacher_intervention || autoDetectIntervention(allText);
+
+  return `
+    <div style="margin-top:24px; padding-top:20px; border-top:2px dashed #d4dffc;">
+      <div style="text-align:center; color:#667eea; font-weight:700; font-size:0.85em; margin-bottom:12px; letter-spacing:1px;">
+        🔬 動機 × 自己調整の研究視点
+      </div>
+      ${renderSection("🌊 動機（やりたさ）の状態", motivationAutoText, data.motivation_detail, `${data.date}-motivation`)}
+      ${renderSection("🎯 自己調整の実態", selfRegAutoText, data.self_regulation_detail, `${data.date}-selfreg`)}
+      ${renderSection("🔄 動機→自己調整の移行", transitionAutoText, data.transition_detail, `${data.date}-transition`)}
+      ${renderSection("👨‍🏫 教師の関わりの影響", interventionAutoText, data.teacher_intervention_detail, `${data.date}-intervention`)}
+      ${data.hypothesis ? `
+        <div class="section">
+          <div class="section-title">💭 この日から得られる仮説</div>
+          <div class="narrative-summary">${formatDetailText(data.hypothesis)}</div>
+        </div>` : ""}
+    </div>
+  `;
+}
+
+/* === 動機の自動推定 === */
+function autoDetectMotivation(text) {
+  let pos = 0, neg = 0;
+  MOTIVATION_KEYWORDS.positive.forEach(kw => {
+    const m = text.match(new RegExp(escapeRegExp(kw), "g"));
+    if (m) pos += m.length;
+  });
+  MOTIVATION_KEYWORDS.negative.forEach(kw => {
+    const m = text.match(new RegExp(escapeRegExp(kw), "g"));
+    if (m) neg += m.length;
+  });
+  if (pos === 0 && neg === 0) return "やりたさに関する記述は明示的にはありません。";
+  if (pos > neg * 2) return `🟢 やりたさが強く現れた日（ポジティブ表現 ${pos}件 / ネガティブ ${neg}件）。子どもの主体的な関与が観察されています。`;
+  if (neg > pos * 2) return `🔴 やりたさが弱まる場面が目立つ日（ネガティブ ${neg}件 / ポジティブ ${pos}件）。疲労や倦怠への対応が課題。`;
+  return `🟡 動機の波がある日（ポジティブ ${pos}件 / ネガティブ ${neg}件）。場面によって動機の起伏が見られます。`;
+}
+
+/* === 自己調整の自動推定 === */
+function autoDetectSelfRegulation(text) {
+  const counts = {};
+  Object.entries(SELF_REGULATION_TYPES).forEach(([type, keywords]) => {
+    let n = 0;
+    keywords.forEach(kw => {
+      const m = text.match(new RegExp(escapeRegExp(kw), "g"));
+      if (m) n += m.length;
+    });
+    counts[type] = n;
+  });
+  const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).filter(([t, n]) => n > 0);
+  if (sorted.length === 0) return "自己調整に関する明示的な記述は見られません。";
+  return `観察された自己調整： ${sorted.map(([t, n]) => `${t}（${n}件）`).join(" / ")}`;
+}
+
+/* === 移行の自動推定 === */
+function autoDetectTransition(text) {
+  const triggers = [];
+  if (/けテぶれ|大分析|プラスレ|＋れ/.test(text)) triggers.push("けテぶれの仕組み");
+  if (/心マトリクス|月ゾーン|太陽|お花畑/.test(text)) triggers.push("心マトリクスでの状態認識");
+  if (/問いかけ|どう思う|なぜ|考えて/.test(text)) triggers.push("教師の問いかけ");
+  if (/任せ|信頼|不在|我慢/.test(text)) triggers.push("教師の不介入・委ねる姿勢");
+  if (/価値づけ|承認|褒め|ありがとう|嬉しい/.test(text)) triggers.push("プロセスへの承認");
+  if (/友達|声かけ合|お互い|協働/.test(text)) triggers.push("仲間との関係");
+  if (triggers.length === 0) return "明示的な移行ポイントは検出されませんでした。";
+  return `移行を支えた要因（推定）： ${triggers.join(" / ")}`;
+}
+
+/* === 教師の関わりの自動推定 === */
+function autoDetectIntervention(text) {
+  const counts = {};
+  Object.entries(TEACHER_INTERVENTION_TYPES).forEach(([type, keywords]) => {
+    let n = 0;
+    keywords.forEach(kw => {
+      const m = text.match(new RegExp(escapeRegExp(kw), "g"));
+      if (m) n += m.length;
+    });
+    counts[type] = n;
+  });
+  const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).filter(([t, n]) => n > 0);
+  if (sorted.length === 0) return "教師の関わりに関する明示的な記述はありません。";
+  return `観察された教師の関わり： ${sorted.map(([t, n]) => `${t}（${n}件）`).join(" / ")}`;
+}
+
+/* 詳細テキストの簡易マークダウン整形 */
+function formatDetailText(text) {
+  // 先にエスケープ → 後でマーカーを置換
+  let html = escapeHtml(text);
+  // **bold**
+  html = html.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+  // *highlight*（強調）
+  html = html.replace(/(?<!\*)\*([^*\n]+?)\*(?!\*)/g, "<em>$1</em>");
+  // 引用 「> ...」
+  html = html.replace(/^&gt;\s?(.+)$/gm, "<blockquote>$1</blockquote>");
+  return html;
+}
+let pendingUpload = null; // {date, dataUrl, fileName}
+
+/* ============================================================
+   📌 写真ストレージ操作（IndexedDB版・大容量対応）
+   - localStorage（5MB制限）から IndexedDB（数十MB〜無制限）に移行
+   - メモリキャッシュで同期アクセスを維持
+   - 既存のlocalStorageデータは初回起動時に自動移行
+   ============================================================ */
+const DB_NAME = "classroom_dashboard";
+const DB_VERSION = 1;
+const STORE_NAME = "photos";
+
+let _db = null;
+let photoCacheByDate = {};       // 同期アクセス用メモリキャッシュ
+let cachedStorageUsage = 0;      // ストレージ使用量のキャッシュ
+
+/* ============================================================
+   ☁️ クラウド同期（GitHub PAT経由）
+   ============================================================ */
+const GITHUB_PAT_KEY = "github_pat_v1";
+const GITHUB_OWNER = "koheiefujii-jpg";
+const GITHUB_REPO = "-";
+const GITHUB_BRANCH = "main";
+const CLOUD_MANIFEST_PATH = "photos/manifest.json";
+let cloudPhotosByDate = {};       // クラウド側の写真（日付別）
+
+function getGitHubPAT() {
+  return localStorage.getItem(GITHUB_PAT_KEY) || "";
+}
+function setGitHubPAT(pat) {
+  if (pat) localStorage.setItem(GITHUB_PAT_KEY, pat);
+  else localStorage.removeItem(GITHUB_PAT_KEY);
+}
+
+/* GitHub Contents API: ファイル取得 */
+async function ghGetFile(path, pat) {
+  const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}?ref=${GITHUB_BRANCH}`;
+  const res = await fetch(url, {
+    headers: { 'Authorization': `Bearer ${pat}`, 'Accept': 'application/vnd.github+json' }
+  });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`GET失敗: ${res.status}`);
+  return await res.json();
+}
+
+/* GitHub Contents API: ファイル作成・更新 */
+async function ghPutFile(path, base64Content, message, pat, sha) {
+  const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}`;
+  const body = { message, content: base64Content, branch: GITHUB_BRANCH };
+  if (sha) body.sha = sha;
+  const res = await fetch(url, {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${pat}`,
+      'Content-Type': 'application/json',
+      'Accept': 'application/vnd.github+json'
+    },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.message || `PUT失敗: ${res.status}`);
+  }
+  return await res.json();
+}
+
+/* UTF-8 文字列をbase64に */
+function utf8ToBase64(str) {
+  return btoa(unescape(encodeURIComponent(str)));
+}
+function base64ToUtf8(b64) {
+  return decodeURIComponent(escape(atob(b64.replace(/\n/g, ''))));
+}
+
+/* 写真をGitHubにアップロード */
+async function uploadPhotoToCloud(photo, dateStr) {
+  const pat = getGitHubPAT();
+  if (!pat) throw new Error("GitHub PATが設定されていません。⚙️設定で登録してください。");
+
+  // photo.url は "data:image/jpeg;base64,..." 形式
+  const base64 = photo.url.split(',')[1];
+  const timestamp = Date.now();
+  const filename = `${timestamp}.jpg`;
+  const path = `photos/${dateStr}/${filename}`;
+
+  // 写真ファイルをアップロード
+  await ghPutFile(path, base64, `Add photo: ${dateStr} ${photo.category}`, pat);
+
+  // manifest.json を更新（既存がなければ作成）
+  let sha = null;
+  let manifest = {};
+  try {
+    const existing = await ghGetFile(CLOUD_MANIFEST_PATH, pat);
+    if (existing) {
+      sha = existing.sha;
+      manifest = JSON.parse(base64ToUtf8(existing.content));
+    }
+  } catch (e) { /* 初回 */ }
+
+  if (!manifest[dateStr]) manifest[dateStr] = [];
+  manifest[dateStr].push({
+    url: path,
+    category: photo.category,
+    caption: photo.caption || "",
+    timestamp: timestamp
+  });
+
+  const newContent = utf8ToBase64(JSON.stringify(manifest, null, 2));
+  await ghPutFile(CLOUD_MANIFEST_PATH, newContent, `Update photo manifest: ${dateStr}`, pat, sha);
+
+  // 即座にクラウド側のキャッシュも更新
+  cloudPhotosByDate = manifest;
+  return path;
+}
+
+/* 起動時にクラウドのmanifestを取得（PAT不要、Pages経由で読み込み） */
+async function loadCloudPhotos() {
+  try {
+    const res = await fetch(`./photos/manifest.json?t=${Date.now()}`);
+    if (res.ok) {
+      cloudPhotosByDate = await res.json();
+    } else {
+      cloudPhotosByDate = {};
+    }
+  } catch (e) {
+    cloudPhotosByDate = {};
+  }
+}
+
+/* IndexedDB を開く */
+function openDB() {
+  return new Promise((resolve, reject) => {
+    if (_db) return resolve(_db);
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = (e) => {
+      const database = e.target.result;
+      if (!database.objectStoreNames.contains(STORE_NAME)) {
+        const store = database.createObjectStore(STORE_NAME, { keyPath: "id", autoIncrement: true });
+        store.createIndex("date", "date", { unique: false });
+      }
+    };
+    req.onsuccess = (e) => { _db = e.target.result; resolve(_db); };
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+/* 全写真を取得 */
+async function dbGetAllPhotos() {
+  const database = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = database.transaction(STORE_NAME, "readonly");
+    const req = tx.objectStore(STORE_NAME).getAll();
+    req.onsuccess = () => resolve(req.result || []);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+/* 写真を追加 */
+async function dbAddPhoto(photo) {
+  const database = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = database.transaction(STORE_NAME, "readwrite");
+    const req = tx.objectStore(STORE_NAME).add(photo);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+/* 写真を削除 */
+async function dbDeletePhoto(id) {
+  const database = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = database.transaction(STORE_NAME, "readwrite");
+    const req = tx.objectStore(STORE_NAME).delete(id);
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+  });
+}
+
+/* メモリキャッシュを再構築 */
+async function refreshPhotoCache() {
+  try {
+    const all = await dbGetAllPhotos();
+    photoCacheByDate = {};
+    let totalSize = 0;
+    for (const p of all) {
+      if (!photoCacheByDate[p.date]) photoCacheByDate[p.date] = [];
+      photoCacheByDate[p.date].push(p);
+      totalSize += getDataUrlSize(p.url || "");
+    }
+    cachedStorageUsage = totalSize;
+  } catch (e) {
+    console.error("キャッシュ更新失敗:", e);
+  }
+}
+
+/* localStorage から IndexedDB へ自動移行（初回のみ） */
+async function migrateFromLocalStorage() {
+  const raw = localStorage.getItem(PHOTO_STORAGE_KEY);
+  if (!raw) return 0;
+  try {
+    const data = JSON.parse(raw);
+    let migrated = 0;
+    for (const date in data) {
+      for (const photo of data[date]) {
+        try {
+          const { id, ...rest } = photo;
+          await dbAddPhoto({ ...rest, date, isUserPhoto: true });
+          migrated++;
+        } catch (e) {
+          console.warn("移行失敗:", e);
+        }
+      }
+    }
+    if (migrated > 0) {
+      localStorage.removeItem(PHOTO_STORAGE_KEY);
+      console.log(`📦 ${migrated}枚の写真をIndexedDBに移行しました`);
+    }
+    return migrated;
+  } catch (e) {
+    console.error("移行エラー:", e);
+    return 0;
+  }
+}
+
+/* === 公開API（既存のコードから呼ばれる関数） === */
+
+function getPhotosForDate(dateStr) {
+  const data = getDataByDate(dateStr);
+  const builtIn = (data && data.photos) ? data.photos : [];
+  const userPhotos = photoCacheByDate[dateStr] || [];
+  // クラウド写真：URLは相対パス（GitHub Pagesからの配信）に変換
+  const cloud = (cloudPhotosByDate[dateStr] || []).map(p => ({
+    ...p,
+    url: p.url.startsWith('http') ? p.url : `./${p.url}`,
+    isCloudPhoto: true
+  }));
+  return [...builtIn, ...cloud, ...userPhotos];
+}
+
+async function addUserPhoto(dateStr, photo) {
+  try {
+    const newPhoto = {
+      ...photo,
+      date: dateStr,
+      isUserPhoto: true,
+      timestamp: Date.now()
+    };
+    const id = await dbAddPhoto(newPhoto);
+    newPhoto.id = id;
+    if (!photoCacheByDate[dateStr]) photoCacheByDate[dateStr] = [];
+    photoCacheByDate[dateStr].push(newPhoto);
+    cachedStorageUsage += getDataUrlSize(newPhoto.url || "");
+
+    // PATが設定されていれば、バックグラウンドで自動アップロード
+    if (getGitHubPAT()) {
+      uploadPhotoToCloud(newPhoto, dateStr)
+        .then(async () => {
+          await deleteUserPhoto(dateStr, id);
+          renderCalendar();
+          renderDetail();
+        })
+        .catch(err => {
+          console.warn("自動クラウド同期に失敗（手動☁️で再試行できます）:", err.message);
+        });
+    }
+    return true;
+  } catch (e) {
+    alert(
+      "写真の保存に失敗しました。\n\n" +
+      `現在の使用量：約 ${formatBytes(cachedStorageUsage)}\n\n` +
+      "エラー：" + (e.message || e)
+    );
+    return false;
+  }
+}
+
+async function deleteUserPhoto(dateStr, photoId) {
+  try {
+    await dbDeletePhoto(photoId);
+    if (photoCacheByDate[dateStr]) {
+      const removed = photoCacheByDate[dateStr].find(p => p.id === photoId);
+      if (removed) cachedStorageUsage -= getDataUrlSize(removed.url || "");
+      photoCacheByDate[dateStr] = photoCacheByDate[dateStr].filter(p => p.id !== photoId);
+    }
+  } catch (e) {
+    alert("削除に失敗しました: " + (e.message || e));
+  }
+}
+
+/* ============================================================
+   📌 ユーティリティ
+   ============================================================ */
+function formatDate(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+function formatDateJP(dateStr) {
+  const d = new Date(dateStr);
+  const dayNames = ["日", "月", "火", "水", "木", "金", "土"];
+  return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日（${dayNames[d.getDay()]}）`;
+}
+function getDataByDate(dateStr) {
+  return ANALYSIS_DATA.find(d => d.date === dateStr);
+}
+function getDataInRange(startDate, endDate) {
+  return ANALYSIS_DATA.filter(d => {
+    const date = new Date(d.date);
+    return date >= startDate && date <= endDate;
+  });
+}
+
+/* ============================================================
+   📌 カレンダー描画
+   ============================================================ */
+function renderCalendar() {
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+  document.getElementById("monthLabel").textContent = `${year}年 ${month + 1}月`;
+
+  // 今日の日付（YYYY-MM-DD）
+  const todayStr = formatDate(new Date());
+
+  const grid = document.getElementById("calendarGrid");
+  while (grid.children.length > 7) grid.removeChild(grid.lastChild);
+
+  const firstDay = new Date(year, month, 1).getDay();
+  const lastDate = new Date(year, month + 1, 0).getDate();
+
+  for (let i = 0; i < firstDay; i++) {
+    const cell = document.createElement("div");
+    cell.className = "day-cell empty";
+    grid.appendChild(cell);
+  }
+
+  for (let d = 1; d <= lastDate; d++) {
+    const date = new Date(year, month, d);
+    const dateStr = formatDate(date);
+    const hasData = !!getDataByDate(dateStr);
+    const hasPhoto = getPhotosForDate(dateStr).length > 0;
+
+    const cell = document.createElement("div");
+    cell.className = "day-cell " + (hasData ? "has-data" : "no-data");
+    if (hasPhoto) cell.classList.add("has-photo");
+    if (dateStr === todayStr) cell.classList.add("today");
+    cell.textContent = d;
+    cell.dataset.date = dateStr;
+
+    if (selectedDate === dateStr) cell.classList.add("selected");
+
+    cell.addEventListener("click", () => {
+      selectedDate = dateStr;
+      activeCategory = "すべて";
+      photosExpanded = false;
+      expandedSections = new Set();
+      expandedDrillDown = null;
+      renderCalendar();
+      renderDetail();
+    });
+
+    grid.appendChild(cell);
+  }
+}
+
+/* ============================================================
+   📌 詳細パネル描画
+   ============================================================ */
+function renderDetail() {
+  const card = document.getElementById("detailCard");
+
+  if (!selectedDate) {
+    card.innerHTML = `
+      <div class="empty-state">
+        <div class="icon">📋</div>
+        <h3>日付を選択してください</h3>
+        <p>カレンダーの色付きの日付をクリックすると、<br>その日の分析結果が表示されます。</p>
+      </div>`;
+    return;
+  }
+
+  switch (currentPeriod) {
+    case "day":   renderDayDetail(card); break;
+    case "week":  renderRangeDetail(card, getWeekRange(selectedDate), "週"); break;
+    case "month": renderRangeDetail(card, getMonthRange(selectedDate), "月"); break;
+    case "half":  renderRangeDetail(card, getHalfRange(selectedDate), "半年"); break;
+    case "year":  renderRangeDetail(card, getYearRange(selectedDate), "年間"); break;
+  }
+
+  // ドリルダウン要素のクリックハンドラを毎回バインド
+  bindDrillDownEvents();
+}
+
+/* ドリルダウン要素のクリック */
+function bindDrillDownEvents() {
+  document.querySelectorAll("[data-drill-type]").forEach(el => {
+    el.addEventListener("click", () => {
+      const type = el.dataset.drillType;
+      const key = el.dataset.drillKey;
+      // 既に開いていたら閉じる、違うものを開いていたら切り替え
+      if (expandedDrillDown && expandedDrillDown.type === type && expandedDrillDown.key === key) {
+        expandedDrillDown = null;
+      } else {
+        expandedDrillDown = { type, key };
+      }
+      renderDetail();
+    });
+  });
+}
+
+/* ===== 単日表示 ===== */
+function renderDayDetail(card) {
+  const data = getDataByDate(selectedDate);
+  const photos = getPhotosForDate(selectedDate);
+
+  if (!data) {
+    // データがなくても写真追加はできる
+    card.innerHTML = `
+      <div class="detail-header">
+        <div>
+          <div class="detail-date">${formatDateJP(selectedDate)}</div>
+          <p style="color:#7f8c8d; font-size:0.9em; margin-top:4px;">分析データはまだありません</p>
+        </div>
+      </div>
+      ${renderPhotoSection(selectedDate, photos)}`;
+    bindPhotoEvents();
+    return;
+  }
+
+  card.innerHTML = `
+    <div class="detail-header">
+      <div>
+        <div class="detail-date">${formatDateJP(data.date)}</div>
+      </div>
+      <div class="detail-meta">
+        <span class="badge badge-subject">📚 ${data.subject}</span>
+        <span class="badge badge-class">👥 ${data.class}</span>
+        <span class="badge badge-positive">⭐ 肯定発言 ${data.positive_count}回</span>
+        ${photos.length > 0 ? `<span class="badge badge-photos">📷 写真 ${photos.length}枚</span>` : ""}
+      </div>
+    </div>
+
+    <!-- 基本の分析セクション -->
+    ${renderSection("よかったところ", data.good, data.good_detail, `${data.date}-good`)}
+    ${renderSection("改善点", data.improve, data.improve_detail, `${data.date}-improve`)}
+    ${renderSection("成長の記録", data.growth, data.growth_detail, `${data.date}-growth`)}
+    ${renderSection("自立した学習者との関連", data.independence, data.independence_detail, `${data.date}-independence`)}
+    ${renderSection("次回への課題", data.next, data.next_detail, `${data.date}-next`)}
+
+    <!-- ★ 動機×自己調整の研究視点による分析 -->
+    ${renderResearchLensBlock(data)}
+
+    <!-- 写真は分析データの後ろ -->
+    ${renderPhotoSection(selectedDate, photos)}
+  `;
+  bindPhotoEvents();
+}
+
+/* ===== 写真セクションのHTML ===== */
+function renderPhotoSection(dateStr, photos) {
+  // カテゴリタブ（旧カテゴリの写真があれば末尾に追加して互換性確保）
+  const extraCategories = [];
+  photos.forEach(p => {
+    if (p.category && !PHOTO_CATEGORIES.includes(p.category) && !extraCategories.includes(p.category)) {
+      extraCategories.push(p.category);
+    }
+  });
+  const categories = ["すべて", ...PHOTO_CATEGORIES, ...extraCategories];
+  const categoryTabs = categories.map(cat => {
+    const count = cat === "すべて" ? photos.length : photos.filter(p => p.category === cat).length;
+    if (cat !== "すべて" && count === 0) return ""; // 0件のカテゴリは非表示
+    return `<div class="category-tab ${activeCategory === cat ? "active" : ""}" data-category="${cat}">${cat} ${count > 0 ? `(${count})` : ""}</div>`;
+  }).join("");
+
+  // フィルタリング
+  const filteredPhotos = activeCategory === "すべて"
+    ? photos
+    : photos.filter(p => p.category === activeCategory);
+
+  // 表示枚数の制限（PHOTOS_INITIAL_LIMIT 枚まで、または展開時は全部）
+  const total = filteredPhotos.length;
+  const showAll = photosExpanded || total <= PHOTOS_INITIAL_LIMIT;
+  const visiblePhotos = showAll ? filteredPhotos : filteredPhotos.slice(0, PHOTOS_INITIAL_LIMIT);
+  const hiddenCount = total - visiblePhotos.length;
+
+  // サムネイルグリッド
+  const thumbs = visiblePhotos.map(photo => `
+    <div class="photo-thumb" data-url="${photo.url}" data-caption="${escapeHtml(photo.caption || '')}">
+      <span class="photo-category-label">${photo.category}</span>
+      ${photo.isUserPhoto ? `<button class="photo-delete-btn" data-photo-id="${photo.id}" title="削除">×</button>` : ""}
+      ${photo.isUserPhoto ? `<button class="photo-cloud-btn" data-photo-id="${photo.id}" title="クラウドに保存">☁️</button>` : ""}
+      ${photo.isUserPhoto ? `<span class="photo-local-badge" title="このデバイスでのみ見える写真">📱 端末のみ</span>` : ""}
+      ${photo.isCloudPhoto ? `<span class="photo-cloud-badge" title="クラウド保存済み（全デバイスで閲覧可）">☁️ 全端末</span>` : ""}
+      <img src="${photo.url}" alt="${escapeHtml(photo.caption || '')}">
+      ${photo.caption ? `<div class="photo-thumb-caption">${escapeHtml(photo.caption)}</div>` : ""}
+    </div>
+  `).join("");
+
+  // 展開/折りたたみボタン
+  let toggleBtn = "";
+  if (total > PHOTOS_INITIAL_LIMIT) {
+    toggleBtn = photosExpanded
+      ? `<button class="photo-toggle-btn" id="photoToggleBtn">▲ 折りたたむ</button>`
+      : `<button class="photo-toggle-btn" id="photoToggleBtn">▼ もっと見る（残り${hiddenCount}枚）</button>`;
+  }
+
+  // 写真の総数表示
+  const countLabel = total > 0 ? `<span style="font-size:0.85em; color:#7f8c8d; font-weight:normal;">（${total}枚）</span>` : "";
+
+  return `
+    <div class="photo-section">
+      <div class="photo-section-header">
+        <div class="section-title" style="margin-bottom:0;">📷 写真ギャラリー${countLabel}</div>
+      </div>
+      ${photos.length > 0 ? `<div class="photo-category-tabs">${categoryTabs}</div>` : ""}
+      ${filteredPhotos.length > 0 ? `<div class="photo-grid">${thumbs}</div>` : ""}
+      ${toggleBtn}
+      <div class="photo-dropzone" id="photoDropzone">
+        <input type="file" id="photoFileInput" accept="image/*" multiple>
+        <div class="icon">📤</div>
+        <p><strong>写真をドラッグ＆ドロップ</strong> または クリックして選択</p>
+        <p class="hint">📱 ここに保存した写真は<strong>このデバイスでのみ</strong>表示されます</p>
+      </div>
+      <div style="margin-top:8px; padding:10px 12px; background:#fff8e1; border-left:3px solid #f39c12; border-radius:0 6px 6px 0; font-size:0.78em; color:#5a6c7d; line-height:1.6;">
+        💡 <strong>全デバイスで写真を見たい場合</strong><br>
+        写真をチャットに送ってください。リポジトリに保存され、iPhone・Mac・どこからでも閲覧できるようになります。
+      </div>
+    </div>
+  `;
+}
+
+/* HTMLエスケープ */
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+/* ===== 写真関連のイベント ===== */
+function bindPhotoEvents() {
+  // カテゴリタブ
+  document.querySelectorAll(".category-tab").forEach(tab => {
+    tab.addEventListener("click", () => {
+      activeCategory = tab.dataset.category;
+      photosExpanded = false;  // カテゴリ切替時に折りたたみ状態に戻す
+      renderDetail();
+    });
+  });
+
+  // 「もっと見る/折りたたむ」ボタン（写真）
+  const toggleBtn = document.getElementById("photoToggleBtn");
+  if (toggleBtn) {
+    toggleBtn.addEventListener("click", () => {
+      photosExpanded = !photosExpanded;
+      renderDetail();
+    });
+  }
+
+  // 「詳しく見る/閉じる」ボタン（各セクション）
+  document.querySelectorAll(".detail-toggle-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const id = btn.dataset.sectionId;
+      if (expandedSections.has(id)) expandedSections.delete(id);
+      else expandedSections.add(id);
+      renderDetail();
+    });
+  });
+
+  // サムネイルクリック→ライトボックス
+  document.querySelectorAll(".photo-thumb").forEach(thumb => {
+    thumb.addEventListener("click", (e) => {
+      if (e.target.classList.contains("photo-delete-btn")) return;
+      if (e.target.classList.contains("photo-cloud-btn")) return;
+      openLightbox(thumb.dataset.url, thumb.dataset.caption);
+    });
+  });
+
+  // ☁️ クラウドアップロードボタン
+  document.querySelectorAll(".photo-cloud-btn").forEach(btn => {
+    btn.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      const pat = getGitHubPAT();
+      if (!pat) {
+        if (confirm("クラウド保存にはGitHub PATの設定が必要です。設定画面を開きますか？")) {
+          document.getElementById("settingsModal").classList.add("show");
+          updatePatStatus();
+        }
+        return;
+      }
+      const photoId = parseFloat(btn.dataset.photoId);
+      const photos = photoCacheByDate[selectedDate] || [];
+      const target = photos.find(p => p.id === photoId);
+      if (!target) return;
+
+      btn.classList.add("uploading");
+      btn.textContent = "⏳";
+      try {
+        await uploadPhotoToCloud(target, selectedDate);
+        // ローカルから削除（クラウド側で見えるようになるので重複を避ける）
+        await deleteUserPhoto(selectedDate, photoId);
+        renderCalendar();
+        renderDetail();
+      } catch (err) {
+        alert("クラウド保存に失敗しました：" + err.message);
+        btn.classList.remove("uploading");
+        btn.textContent = "☁️";
+      }
+    });
+  });
+
+  // 削除ボタン
+  document.querySelectorAll(".photo-delete-btn").forEach(btn => {
+    btn.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      if (confirm("この写真を削除しますか？")) {
+        await deleteUserPhoto(selectedDate, parseFloat(btn.dataset.photoId));
+        renderCalendar();
+        renderDetail();
+      }
+    });
+  });
+
+  // ドロップゾーン
+  const dropzone = document.getElementById("photoDropzone");
+  const fileInput = document.getElementById("photoFileInput");
+  if (dropzone) {
+    dropzone.addEventListener("click", () => fileInput.click());
+    dropzone.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      dropzone.classList.add("dragover");
+    });
+    dropzone.addEventListener("dragleave", () => dropzone.classList.remove("dragover"));
+    dropzone.addEventListener("drop", (e) => {
+      e.preventDefault();
+      dropzone.classList.remove("dragover");
+      handleFiles(e.dataTransfer.files);
+    });
+    fileInput.addEventListener("change", (e) => handleFiles(e.target.files));
+  }
+}
+
+/* ===== ファイル読み込み（base64化） ===== */
+function handleFiles(files) {
+  const fileArray = Array.from(files).filter(f => f.type.startsWith("image/"));
+  if (fileArray.length === 0) {
+    alert("画像ファイルを選択してください。");
+    return;
+  }
+  // 1枚ずつ処理（カテゴリ選択モーダルを出す）
+  processNextFile(fileArray, 0);
+}
+
+async function processNextFile(files, index) {
+  if (index >= files.length) return;
+  const file = files[index];
+  try {
+    const rawDataUrl = await readFileAsDataURL(file);
+    const originalSize = getDataUrlSize(rawDataUrl);
+    // 自動圧縮
+    const compressedDataUrl = await compressImage(rawDataUrl);
+    const compressedSize = getDataUrlSize(compressedDataUrl);
+
+    pendingUpload = {
+      date: selectedDate,
+      dataUrl: compressedDataUrl,
+      originalSize: originalSize,
+      compressedSize: compressedSize,
+      fileName: file.name,
+      remainingFiles: files,
+      currentIndex: index
+    };
+    showCategoryPicker();
+  } catch (err) {
+    alert("画像の読み込みに失敗しました: " + (err.message || err));
+    // 次の画像に進む
+    if (index + 1 < files.length) {
+      processNextFile(files, index + 1);
+    }
+  }
+}
+
+/* ===== カテゴリ選択モーダル ===== */
+function showCategoryPicker() {
+  const picker = document.getElementById("categoryPicker");
+  const buttons = document.getElementById("categoryButtons");
+  const progress = document.getElementById("uploadProgress");
+  const preview = document.getElementById("uploadPreview");
+  const saveAllBtn = document.getElementById("saveAllUpload");
+
+  buttons.innerHTML = PHOTO_CATEGORIES.map(cat =>
+    `<button data-category="${cat}">${getCategoryEmoji(cat)} ${cat}</button>`
+  ).join("");
+  document.getElementById("captionInput").value = "";
+
+  // プレビュー画像表示
+  if (pendingUpload && pendingUpload.dataUrl) {
+    preview.src = pendingUpload.dataUrl;
+    preview.style.display = "block";
+  } else {
+    preview.style.display = "none";
+  }
+
+  // 進捗表示と「全部保存」ボタンの表示制御
+  if (pendingUpload && pendingUpload.remainingFiles) {
+    const total = pendingUpload.remainingFiles.length;
+    const current = pendingUpload.currentIndex + 1;
+    const remaining = total - pendingUpload.currentIndex;
+    let sizeInfo = "";
+    if (pendingUpload.originalSize && pendingUpload.compressedSize) {
+      const orig = formatBytes(pendingUpload.originalSize);
+      const comp = formatBytes(pendingUpload.compressedSize);
+      const ratio = Math.round((1 - pendingUpload.compressedSize / pendingUpload.originalSize) * 100);
+      sizeInfo = `\n📐 ${orig} → ${comp} (${ratio}%圧縮)`;
+    }
+    const usage = getStorageUsage();
+    progress.textContent = `📦 ${current} / ${total} 枚目 ｜ 総使用量: ${formatBytes(usage)}${sizeInfo}`;
+    progress.style.whiteSpace = "pre-line";
+    // 残り2枚以上ある時だけ「全部保存」ボタンを表示
+    saveAllBtn.style.display = remaining >= 2 ? "inline-block" : "none";
+    saveAllBtn.textContent = `📦 残り${remaining}枚を全部このカテゴリで保存`;
+  } else {
+    progress.textContent = "";
+    saveAllBtn.style.display = "none";
+  }
+
+  picker.classList.add("show");
+
+  buttons.querySelectorAll("button").forEach(btn => {
+    btn.addEventListener("click", () => {
+      buttons.querySelectorAll("button").forEach(b => {
+        b.style.borderColor = "#e1e8ed";
+        b.style.background = "white";
+        delete b.dataset.selected;
+      });
+      btn.style.borderColor = "#667eea";
+      btn.style.background = "#f0f3f7";
+      btn.dataset.selected = "true";
+    });
+  });
+}
+
+function getCategoryEmoji(cat) {
+  const map = {
+    "板書": "📋",
+    "宿題ノート": "📔",
+    "算数ノート": "🔢",
+    "国語ノート": "📖",
+    "その他のノート": "📒",
+    "体育プリント": "🏃",
+    "掲示物": "🖼️",
+    "教室": "🏫",
+    "その他": "📷",
+    // 旧カテゴリ（既存写真の互換性のため）
+    "ノート": "📓",
+    "プリント": "📄"
+  };
+  return map[cat] || "📷";
+}
+
+document.getElementById("cancelUpload").addEventListener("click", () => {
+  document.getElementById("categoryPicker").classList.remove("show");
+  pendingUpload = null;
+});
+
+/* 1枚だけ保存（個別カテゴリ） */
+document.getElementById("confirmUpload").addEventListener("click", async () => {
+  if (!pendingUpload) return;
+  const selected = document.querySelector("#categoryButtons button[data-selected='true']");
+  const category = selected ? selected.dataset.category : "その他";
+  const caption = document.getElementById("captionInput").value.trim();
+
+  await addUserPhoto(pendingUpload.date, {
+    url: pendingUpload.dataUrl,
+    category: category,
+    caption: caption || pendingUpload.fileName
+  });
+
+  document.getElementById("categoryPicker").classList.remove("show");
+
+  // 次のファイルがあれば続けて処理
+  const next = pendingUpload.currentIndex + 1;
+  const remaining = pendingUpload.remainingFiles;
+  pendingUpload = null;
+  if (next < remaining.length) {
+    setTimeout(() => processNextFile(remaining, next), 100);
+  } else {
+    renderCalendar();
+    renderDetail();
+  }
+});
+
+/* 残りを全部同じカテゴリで一括保存 */
+document.getElementById("saveAllUpload").addEventListener("click", async () => {
+  if (!pendingUpload) return;
+  const selected = document.querySelector("#categoryButtons button[data-selected='true']");
+  const category = selected ? selected.dataset.category : "その他";
+  const baseCaption = document.getElementById("captionInput").value.trim();
+  const saveBtn = document.getElementById("saveAllUpload");
+
+  const files = pendingUpload.remainingFiles;
+  const startIndex = pendingUpload.currentIndex;
+  const date = pendingUpload.date;
+  const total = files.length - startIndex;
+
+  // ボタンを無効化＆進捗表示
+  saveBtn.disabled = true;
+  saveBtn.textContent = "🔄 圧縮中...";
+
+  // 現在表示中の写真を保存（既に圧縮済み）
+  await addUserPhoto(date, {
+    url: pendingUpload.dataUrl,
+    category: category,
+    caption: baseCaption || pendingUpload.fileName
+  });
+
+  let savedCount = 1;
+  let failedCount = 0;
+
+  // 残りのファイルを順次読み込み→圧縮→保存
+  for (let i = startIndex + 1; i < files.length; i++) {
+    try {
+      saveBtn.textContent = `🔄 圧縮中... (${i - startIndex + 1}/${total})`;
+      const rawDataUrl = await readFileAsDataURL(files[i]);
+      const compressed = await compressImage(rawDataUrl);
+      const ok = await addUserPhoto(date, {
+        url: compressed,
+        category: category,
+        caption: baseCaption ? `${baseCaption} ${i - startIndex + 1}` : files[i].name
+      });
+      if (ok) savedCount++; else failedCount++;
+    } catch (err) {
+      console.error("画像処理失敗:", files[i].name, err);
+      failedCount++;
+    }
+  }
+
+  saveBtn.disabled = false;
+  saveBtn.textContent = "📦 残りを全部このカテゴリで保存";
+  document.getElementById("categoryPicker").classList.remove("show");
+  pendingUpload = null;
+  renderCalendar();
+  renderDetail();
+
+  if (failedCount > 0) {
+    alert(`${savedCount}枚を保存しました。${failedCount}枚は容量制限で保存できませんでした。`);
+  }
+});
+
+/* ファイルをDataURLとして読み込む（Promise版） */
+function readFileAsDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => resolve(e.target.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+/* ===== ライトボックス ===== */
+function openLightbox(url, caption) {
+  document.getElementById("lightboxImg").src = url;
+  document.getElementById("lightboxCaption").textContent = caption || "";
+  document.getElementById("lightbox").classList.add("show");
+}
+document.getElementById("lightbox").addEventListener("click", (e) => {
+  if (e.target.id === "lightbox" || e.target.id === "lightboxClose") {
+    document.getElementById("lightbox").classList.remove("show");
+  }
+});
+document.getElementById("lightboxClose").addEventListener("click", () => {
+  document.getElementById("lightbox").classList.remove("show");
+});
+
+/* ===== 期間まとめ表示 ===== */
+/* ============================================================
+   期間まとめ表示：「自立した学習者」育成の視点で分析
+   ============================================================ */
+
+/* 自立した学習者の3軸キーワード */
+const AUTONOMY_AXES = {
+  "主体性": ["主体性", "主体", "自分から", "自走", "自発", "提案", "選択", "決定", "自分で考え"],
+  "自己調整": ["自己調整", "けテぶれ", "大分析", "振り返り", "計画", "メタ認知", "心マトリクス", "プラス点", "＋れ", "見直し", "セルフ"],
+  "協働": ["協働", "太陽", "友達に聞く", "声かけ合", "ペア", "助け合い", "信じて思いやる", "話しやすい"]
+};
+
+/* ★ 動機（やりたさ）のキーワード */
+const MOTIVATION_KEYWORDS = {
+  positive: ["興味", "関心", "嬉しい", "面白い", "夢中", "わくわく", "やりたい", "挑戦", "もっと", "頑張ろう", "意欲", "楽しい", "好き", "感動"],
+  negative: ["嫌", "面倒", "疲れ", "ふわふわ", "やりたくない", "つまらない", "退屈", "だるい", "やる気がない"]
+};
+
+/* ★ 自己調整の4タイプ */
+const SELF_REGULATION_TYPES = {
+  "やりたくないが取り組む": ["わからない", "助けを求め", "苦手", "難しい", "聞きに来", "頑張って", "それでも", "苦手な子"],
+  "試行錯誤": ["試行錯誤", "やってみる", "試す", "工夫", "失敗", "もう一度", "違うやり方", "改善", "考え直"],
+  "目標・方法の調整": ["計画", "けテぶれ", "プラスレ", "＋れ", "目標", "選ぶ", "決める", "ペース", "自分で考え", "大分析"],
+  "感情を乗り越える": ["心マトリクス", "ふわふわ", "落ち着", "我慢", "嘘をつかない", "誠実", "向き合", "コントロール"]
+};
+
+/* ★ 教師の関わりの4類型 */
+const TEACHER_INTERVENTION_TYPES = {
+  "問いかけ": ["どう思う", "なぜ", "どうすれば", "問い", "考えて", "問いかけ", "聞いてみ", "確認"],
+  "待つ・任せる": ["任せ", "待つ", "我慢", "声かけ前", "不在", "教えない", "見守", "信頼", "信じ"],
+  "評価・承認": ["褒め", "ありがとう", "嬉しい", "すごい", "認め", "価値づけ", "承認", "学級通信"],
+  "環境設計": ["けテぶれ", "心マトリクス", "掲示", "学級通信", "プラスレ", "＋れ", "QNKS", "ルール", "仕組み", "プロトコル"]
+};
+
+/* 指導の傾向テーマ（improve/next から検出） */
+const PEDAGOGY_THEMES = {
+  "教師の発話量管理": ["話しすぎ", "発話量", "語り", "教えすぎ", "発話を", "短く"],
+  "個別フォロー": ["個別", "一人一人", "声かけ", "ヒアリング", "個別ケア", "個別声かけ"],
+  "体験・実技化": ["体験", "やってみる", "実技", "ペア活動"],
+  "可視化・掲示物": ["掲示", "見本", "ビジュアル", "ポスター", "可視化"],
+  "ルール化・仕組み化": ["ルール化", "プロトコル", "仕組み", "ルーティン", "テンプレ"],
+  "学年・校内への波及": ["学年", "他の先生", "校内", "展開", "学年主任"],
+  "教師の自己ケア": ["休養", "消耗", "持続可能", "回復", "セルフケア"]
+};
+
+/* ============================================================
+   ★ ドリルダウン：統計カード/チャートバーから具体例を抽出
+   ============================================================ */
+
+const POSITIVE_FB_PHRASES = [
+  "褒め", "ありがとう", "嬉しい", "すごい", "素敵", "誇れる", "感動",
+  "頼もしい", "立派", "感心", "拍手", "認め", "称賛", "価値づけ",
+  "めちゃくちゃ", "本当に", "やっぱ"
+];
+
+const FB_FIELDS = [
+  "good", "good_detail", "growth_detail",
+  "teacher_intervention", "teacher_intervention_detail"
+];
+
+const AUTONOMY_FIELDS = [
+  "independence", "independence_detail",
+  "growth", "growth_detail", "good_detail",
+  "self_regulation", "self_regulation_detail"
+];
+
+/* 文章を文単位に分割し、指定キーワードを含む文を抽出 */
+function extractQuotesContaining(items, keywords, fieldNames) {
+  const seen = new Set();
+  const results = [];
+  items.forEach(d => {
+    fieldNames.forEach(field => {
+      const text = d[field];
+      if (!text) return;
+      // 「。」「\n」で分割
+      const sentences = String(text).split(/(?<=。)|\n+/);
+      sentences.forEach(s => {
+        const trimmed = s.trim().replace(/^[-・*\s]+/, "");
+        if (trimmed.length < 8 || trimmed.length > 240) return;
+        if (keywords.some(kw => trimmed.includes(kw))) {
+          const key = d.date + ":" + trimmed.substring(0, 40);
+          if (!seen.has(key)) {
+            seen.add(key);
+            results.push({ date: d.date, quote: trimmed });
+          }
+        }
+      });
+    });
+  });
+  return results;
+}
+
+/* ドリルダウンの詳細パネルを描画 */
+function renderDrillDownPanel(items) {
+  if (!expandedDrillDown) return "";
+  const { type, key } = expandedDrillDown;
+
+  let title = "";
+  let quotes = [];
+
+  if (type === "stat" && key === "positive") {
+    title = "💬 肯定発言・承認の具体例";
+    quotes = extractQuotesContaining(items, POSITIVE_FB_PHRASES, FB_FIELDS);
+  } else if (type === "stat" && key === "autonomy") {
+    title = "🌱 自立場面の具体例";
+    const allKW = Object.values(AUTONOMY_AXES).flat();
+    quotes = extractQuotesContaining(items, allKW, AUTONOMY_FIELDS);
+  } else if (type === "stat" && key === "days") {
+    title = "📅 分析記録のあった日";
+    quotes = items.map(d => ({
+      date: d.date,
+      quote: (d.good || "").substring(0, 80) + "..."
+    }));
+  } else if (type === "stat" && key === "avgFB") {
+    title = "⭐ 各日の肯定発言数";
+    quotes = items.map(d => ({
+      date: d.date,
+      quote: `肯定発言：**${d.positive_count || 0}回** ／ ${(d.good || "").substring(0, 60)}...`
+    }));
+  } else if (type === "autonomy") {
+    // 自立3軸のいずれかをクリック
+    title = `🎯 「${key}」が観察された場面`;
+    quotes = extractQuotesContaining(items, AUTONOMY_AXES[key] || [], AUTONOMY_FIELDS);
+  } else if (type === "selfreg") {
+    title = `🔄 「${key}」の場面`;
+    quotes = extractQuotesContaining(items, SELF_REGULATION_TYPES[key] || [], [
+      "good", "good_detail", "growth_detail", "self_regulation", "self_regulation_detail",
+      "transition", "transition_detail"
+    ]);
+  } else if (type === "intervention") {
+    title = `👨‍🏫 「${key}」の関わり`;
+    quotes = extractQuotesContaining(items, TEACHER_INTERVENTION_TYPES[key] || [], [
+      "good", "good_detail", "improve", "improve_detail",
+      "teacher_intervention", "teacher_intervention_detail",
+      "transition", "transition_detail"
+    ]);
+  } else if (type === "pedagogy") {
+    title = `🎓 「${key}」に関する記述`;
+    quotes = extractQuotesContaining(items, PEDAGOGY_THEMES[key] || [], [
+      "improve", "improve_detail", "next", "next_detail"
+    ]);
+  }
+
+  if (quotes.length === 0) {
+    return `<div class="drill-detail"><div class="drill-title">${title}</div><div class="drill-empty">具体的な記述が見つかりませんでした</div></div>`;
+  }
+
+  // 日付ごとにグループ化
+  const byDate = {};
+  quotes.forEach(q => {
+    if (!byDate[q.date]) byDate[q.date] = [];
+    byDate[q.date].push(q.quote);
+  });
+
+  const blocks = Object.entries(byDate).map(([date, qs]) => `
+    <div class="drill-date-block">
+      <div class="drill-date">${formatDateJP(date)}（${qs.length}件）</div>
+      <ul class="drill-quotes">
+        ${qs.map(q => `<li>${formatDetailText(q)}</li>`).join("")}
+      </ul>
+    </div>
+  `).join("");
+
+  return `
+    <div class="drill-detail">
+      <div class="drill-title">${title}（合計${quotes.length}件）</div>
+      ${blocks}
+    </div>
+  `;
+}
+
+function renderRangeDetail(card, range, label) {
+  const items = getDataInRange(range.start, range.end);
+  currentRangeItems = items;  // ドリルダウン用に保持
+  const totalPositive = items.reduce((sum, d) => sum + (d.positive_count || 0), 0);
+  const avgFB = items.length > 0 ? Math.round(totalPositive / items.length) : 0;
+
+  const header = `
+    <div class="detail-header">
+      <div>
+        <div class="detail-date">${label}まとめ</div>
+        <p style="color:#7f8c8d; font-size:0.9em; margin-top:4px;">
+          ${formatDateJP(formatDate(range.start))} 〜 ${formatDateJP(formatDate(range.end))}
+        </p>
+        <p style="color:#667eea; font-size:0.82em; margin-top:6px; font-weight:600;">
+          🌱 視点：「自立した学習者」の育成に向けた指導になっているか
+        </p>
+      </div>
+    </div>`;
+
+  if (items.length === 0) {
+    card.innerHTML = header + `
+      <div class="empty-state">
+        <div class="icon">📭</div>
+        <h3>この${label}には分析データがありません</h3>
+        <p>カレンダーから別の${label}を選ぶか、データを追加してください。</p>
+      </div>`;
+    return;
+  }
+
+  // ① サマリ統計（自立育成にフォーカス）★ タップ可能
+  const autonomyMentions = countAutonomyMentions(items);
+  const totalAutonomy = autonomyMentions.total;
+  const isActive = (type, key) =>
+    expandedDrillDown && expandedDrillDown.type === type && expandedDrillDown.key === key;
+
+  const summary = `
+    <div class="summary-grid">
+      <div class="stat-card stat-card-clickable ${isActive('stat','days')?'active':''}" data-drill-type="stat" data-drill-key="days">
+        <div class="stat-label">分析日数</div>
+        <div class="stat-value">${items.length}日</div>
+      </div>
+      <div class="stat-card stat-card-clickable ${isActive('stat','positive')?'active':''}" data-drill-type="stat" data-drill-key="positive">
+        <div class="stat-label">肯定発言合計</div>
+        <div class="stat-value">${totalPositive}回</div>
+      </div>
+      <div class="stat-card stat-card-clickable ${isActive('stat','avgFB')?'active':''}" data-drill-type="stat" data-drill-key="avgFB">
+        <div class="stat-label">1日平均FB</div>
+        <div class="stat-value">${avgFB}回</div>
+      </div>
+      <div class="stat-card stat-card-clickable ${isActive('stat','autonomy')?'active':''}" data-drill-type="stat" data-drill-key="autonomy">
+        <div class="stat-label">自立場面の言及</div>
+        <div class="stat-value">${totalAutonomy}件</div>
+      </div>
+    </div>
+    ${expandedDrillDown && expandedDrillDown.type === 'stat' ? renderDrillDownPanel(items) : ""}`;
+
+  // ② ナラティブサマリ（自立育成の文脈）
+  const narrativeBlock = renderNarrativeSummary(items, label, totalPositive, avgFB, autonomyMentions);
+
+  // ③ 自立3軸のバランス
+  const autonomyChartBlock = renderAutonomyChart(autonomyMentions);
+
+  // ④ 自立育成のハイライト
+  const highlightsBlock = renderAutonomyHighlights(items);
+
+  // ⑤ 肯定発言の推移
+  const fbChartBlock = renderFBChart(items);
+
+  // ⑥ 指導の傾向分析（improve/next から検出）
+  const pedagogyBlock = renderPedagogyAnalysis(items);
+
+  // ⑦ 自立を支えたキーフレーズ
+  const keywordBlock = renderKeywordSection(items);
+
+  // ⑧ ★ 動機×自己調整の研究分析
+  const researchBlock = renderResearchAnalysis(items);
+
+  // ⑨ 改善サイクル分析（半年/年のみ）
+  let trendBlock = "";
+  if (currentPeriod === "half" || currentPeriod === "year") {
+    trendBlock = renderLongTermTrend(items, label);
+  }
+
+  // ⑩ エントリ一覧（既存）
+  const entries = items.map(d => {
+    const photos = getPhotosForDate(d.date);
+    const photoStrip = photos.length > 0
+      ? `<div style="display:flex; gap:6px; margin-top:8px; flex-wrap:wrap;">
+          ${photos.slice(0, 4).map(p => `<img src="${p.url}" style="width:60px; height:60px; object-fit:contain; background:#2c3e50; border-radius:4px;" alt="">`).join("")}
+          ${photos.length > 4 ? `<div style="width:60px; height:60px; background:#f0f3f7; display:flex; align-items:center; justify-content:center; border-radius:4px; font-size:0.8em; color:#5a6c7d;">+${photos.length - 4}</div>` : ""}
+        </div>`
+      : "";
+    return `
+      <div class="entry-item">
+        <div class="entry-date">${formatDateJP(d.date)} ｜ ⭐${d.positive_count || 0}回</div>
+        <div class="entry-summary">${d.good.length > 100 ? d.good.substring(0, 100) + "..." : d.good}</div>
+        ${photoStrip}
+      </div>`;
+  }).join("");
+
+  const entryListBlock = `
+    <div class="section">
+      <div class="section-title">📋 分析エントリ一覧</div>
+      <div class="entry-list" style="margin-top:8px;">${entries}</div>
+    </div>`;
+
+  card.innerHTML = header + summary + narrativeBlock + autonomyChartBlock
+    + highlightsBlock + fbChartBlock + pedagogyBlock + keywordBlock
+    + researchBlock + trendBlock + entryListBlock;
+}
+
+/* === ★ 期間の動機×自己調整 研究分析ブロック === */
+function renderResearchAnalysis(items) {
+  // 動機の波（ポジ/ネガ）
+  let totalPos = 0, totalNeg = 0;
+  // 自己調整の4タイプ
+  const srCounts = {};
+  Object.keys(SELF_REGULATION_TYPES).forEach(t => srCounts[t] = 0);
+  // 教師の関わり4類型
+  const tiCounts = {};
+  Object.keys(TEACHER_INTERVENTION_TYPES).forEach(t => tiCounts[t] = 0);
+
+  items.forEach(d => {
+    const text = [
+      d.good, d.improve, d.growth, d.independence, d.next,
+      d.good_detail, d.improve_detail, d.growth_detail,
+      d.independence_detail, d.next_detail
+    ].filter(Boolean).join(" ");
+
+    MOTIVATION_KEYWORDS.positive.forEach(kw => {
+      const m = text.match(new RegExp(escapeRegExp(kw), "g"));
+      if (m) totalPos += m.length;
+    });
+    MOTIVATION_KEYWORDS.negative.forEach(kw => {
+      const m = text.match(new RegExp(escapeRegExp(kw), "g"));
+      if (m) totalNeg += m.length;
+    });
+    Object.entries(SELF_REGULATION_TYPES).forEach(([type, keywords]) => {
+      keywords.forEach(kw => {
+        const m = text.match(new RegExp(escapeRegExp(kw), "g"));
+        if (m) srCounts[type] += m.length;
+      });
+    });
+    Object.entries(TEACHER_INTERVENTION_TYPES).forEach(([type, keywords]) => {
+      keywords.forEach(kw => {
+        const m = text.match(new RegExp(escapeRegExp(kw), "g"));
+        if (m) tiCounts[type] += m.length;
+      });
+    });
+  });
+
+  // 動機波の評価
+  const motivationTotal = totalPos + totalNeg;
+  let motivationMsg;
+  if (motivationTotal === 0) {
+    motivationMsg = "動機に関する記述は明示的にはありません。";
+  } else {
+    const posRate = Math.round((totalPos / motivationTotal) * 100);
+    motivationMsg = `この期間の動機表現は、ポジティブ <strong>${totalPos}件</strong>（${posRate}%）／ネガティブ <strong>${totalNeg}件</strong>（${100 - posRate}%）。`;
+    if (posRate >= 70) motivationMsg += " <strong>やりたさが優勢な期間</strong>です。";
+    else if (posRate >= 40) motivationMsg += " 動機の<strong>波がある期間</strong>です。";
+    else motivationMsg += " <strong>やりたさが弱まりがちな期間</strong>。教師の介入と仕組みでの支えが鍵。";
+  }
+
+  const isActiveDrill = (type, key) =>
+    expandedDrillDown && expandedDrillDown.type === type && expandedDrillDown.key === key;
+
+  // 自己調整4タイプ チャート（タップ可能）
+  const srMax = Math.max(...Object.values(srCounts), 1);
+  const srBars = Object.entries(SELF_REGULATION_TYPES).map(([type]) => {
+    const v = srCounts[type];
+    const ratio = (v / srMax) * 100;
+    const cls = isActiveDrill("selfreg", type) ? "active" : "";
+    return `
+      <div class="chart-bar-row clickable ${cls}" data-drill-type="selfreg" data-drill-key="${type}">
+        <div class="chart-bar-label" style="min-width:160px;">${type}</div>
+        <div class="chart-bar-track">
+          <div class="chart-bar-fill" style="width:${ratio}%; background:linear-gradient(90deg, #8e44ad, #9b59b6);"></div>
+        </div>
+        <div class="chart-bar-value">${v}件</div>
+      </div>`;
+  }).join("");
+  const srDrill = (expandedDrillDown && expandedDrillDown.type === "selfreg")
+    ? renderDrillDownPanel(items) : "";
+
+  // 教師関わり4類型 チャート（タップ可能）
+  const tiMax = Math.max(...Object.values(tiCounts), 1);
+  const tiBars = Object.entries(TEACHER_INTERVENTION_TYPES).map(([type]) => {
+    const v = tiCounts[type];
+    const ratio = (v / tiMax) * 100;
+    const cls = isActiveDrill("intervention", type) ? "active" : "";
+    return `
+      <div class="chart-bar-row clickable ${cls}" data-drill-type="intervention" data-drill-key="${type}">
+        <div class="chart-bar-label" style="min-width:160px;">${type}</div>
+        <div class="chart-bar-track">
+          <div class="chart-bar-fill" style="width:${ratio}%; background:linear-gradient(90deg, #16a085, #1abc9c);"></div>
+        </div>
+        <div class="chart-bar-value">${v}件</div>
+      </div>`;
+  }).join("");
+  const tiDrill = (expandedDrillDown && expandedDrillDown.type === "intervention")
+    ? renderDrillDownPanel(items) : "";
+
+  // 自己調整・教師関わりの強い軸の特定
+  const strongestSR = Object.entries(srCounts).sort((a, b) => b[1] - a[1])[0];
+  const weakestSR = Object.entries(srCounts).sort((a, b) => a[1] - b[1])[0];
+  const strongestTI = Object.entries(tiCounts).sort((a, b) => b[1] - a[1])[0];
+
+  // 仮説的考察
+  let hypothesisMsg = "";
+  if (strongestSR && strongestSR[1] > 0) {
+    hypothesisMsg += `<div class="highlight-item">🎯 <strong>最も観察された自己調整：</strong>${strongestSR[0]}（${strongestSR[1]}件）</div>`;
+  }
+  if (weakestSR && weakestSR[1] === 0 && srCounts !== {}) {
+    hypothesisMsg += `<div class="highlight-item">⚠️ <strong>育成余地：</strong>「${weakestSR[0]}」の場面が記録されていません</div>`;
+  }
+  if (strongestTI && strongestTI[1] > 0) {
+    hypothesisMsg += `<div class="highlight-item">👨‍🏫 <strong>教師の主な関わり：</strong>${strongestTI[0]}（${strongestTI[1]}件）が中心</div>`;
+  }
+  if (totalPos > 0 && srCounts["やりたくないが取り組む"] > 0) {
+    hypothesisMsg += `<div class="highlight-item">💡 <strong>仮説：</strong>やりたさだけでなく「やりたくないが取り組む」場面も記録されており、<em>動機に依存しない学びの土台</em>が形成されつつある</div>`;
+  }
+
+  return `
+    <div style="margin-top:24px; padding-top:16px; border-top:2px dashed #d4dffc;">
+      <div style="text-align:center; color:#667eea; font-weight:700; font-size:0.85em; margin-bottom:12px; letter-spacing:1px;">
+        🔬 動機 × 自己調整の研究視点
+      </div>
+
+      <div class="section">
+        <div class="section-title">🌊 動機（やりたさ）の波</div>
+        <div class="narrative-summary">${motivationMsg}</div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">🎯 自己調整の4タイプ分布</div>
+        <div class="period-chart">${srBars}</div>
+        <p style="font-size:0.78em; color:#95a5a6; margin-top:8px;">※ バーをタップで具体例を表示</p>
+        ${srDrill}
+      </div>
+
+      <div class="section">
+        <div class="section-title">👨‍🏫 教師の関わり4類型</div>
+        <div class="period-chart">${tiBars}</div>
+        <p style="font-size:0.78em; color:#95a5a6; margin-top:8px;">※ バーをタップで具体例を表示</p>
+        ${tiDrill}
+      </div>
+
+      ${hypothesisMsg ? `
+        <div class="section">
+          <div class="section-title">💭 期間内の仮説と所見</div>
+          <div class="highlight-box">${hypothesisMsg}</div>
+        </div>` : ""}
+    </div>`;
+}
+
+/* === 自立3軸の言及をカウント === */
+function countAutonomyMentions(items) {
+  const counts = { "主体性": 0, "自己調整": 0, "協働": 0 };
+  const detailDates = { "主体性": new Set(), "自己調整": new Set(), "協働": new Set() };
+
+  items.forEach(d => {
+    const text = [
+      d.independence, d.independence_detail,
+      d.growth, d.growth_detail,
+      d.good, d.good_detail
+    ].filter(Boolean).join(" ");
+
+    Object.entries(AUTONOMY_AXES).forEach(([axis, keywords]) => {
+      const hits = keywords.reduce((sum, kw) => {
+        const matches = text.match(new RegExp(escapeRegExp(kw), "g"));
+        return sum + (matches ? matches.length : 0);
+      }, 0);
+      if (hits > 0) {
+        counts[axis] += hits;
+        detailDates[axis].add(d.date);
+      }
+    });
+  });
+
+  return {
+    counts: counts,
+    dates: detailDates,
+    total: counts["主体性"] + counts["自己調整"] + counts["協働"]
+  };
+}
+
+function escapeRegExp(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/* === 自動生成のナラティブサマリ（自立育成の文脈） === */
+function renderNarrativeSummary(items, label, totalPositive, avgFB, autonomy) {
+  const sorted = [...items].sort((a, b) => new Date(a.date) - new Date(b.date));
+  const first = sorted[0];
+  const last = sorted[sorted.length - 1];
+
+  // 3軸のバランス評価
+  const c = autonomy.counts;
+  const max = Math.max(c["主体性"], c["自己調整"], c["協働"]);
+  const min = Math.min(c["主体性"], c["自己調整"], c["協働"]);
+  const balance = (max - min) <= Math.max(2, max * 0.3);
+  const dominantAxis = Object.entries(c).sort((a, b) => b[1] - a[1])[0][0];
+
+  // 傾向の表現
+  let balanceMsg;
+  if (autonomy.total === 0) {
+    balanceMsg = "自立に関する言及がまだ少なく、<em>意識的な観察と記録</em>を増やしたい時期です。";
+  } else if (balance) {
+    balanceMsg = `主体性・自己調整・協働の<strong>3軸がバランス良く</strong>育まれています。`;
+  } else {
+    balanceMsg = `<strong>${dominantAxis}</strong>に関する場面が多く記録されています。残り2軸への意識的な目配りが次の課題です。`;
+  }
+
+  // FB推移の評価
+  let fbMsg = "";
+  if (items.length >= 3) {
+    const ratio = last.positive_count / Math.max(first.positive_count, 1);
+    if (ratio > 1.1) fbMsg = "肯定的な働きかけが期間内で<strong>増加傾向</strong>にあります。";
+    else if (ratio < 0.9) fbMsg = "肯定的な働きかけは<strong>やや控えめ</strong>になっています。教師の体力サインに注意。";
+    else fbMsg = "肯定的な働きかけは<strong>安定的</strong>に継続されています。";
+  }
+
+  // 育成成果の判定
+  let assessment;
+  if (autonomy.total >= items.length * 3 && avgFB >= 15) {
+    assessment = `🎯 <strong>「自立した学習者」育成の指導が高い水準で機能しています。</strong>`;
+  } else if (autonomy.total >= items.length * 1.5 && avgFB >= 10) {
+    assessment = `🌱 <strong>「自立した学習者」育成の方向に着実に進んでいます。</strong>`;
+  } else if (items.length >= 2) {
+    assessment = `💭 自立育成の意識を<strong>もう一段強化する余地</strong>があります。`;
+  } else {
+    assessment = `📝 データを蓄積することで傾向が見えてきます。`;
+  }
+
+  return `
+    <div class="section">
+      <div class="section-title">💡 ${label}の概観</div>
+      <div class="narrative-summary">
+        ${assessment}<br><br>
+        この${label}は<strong>${items.length}日</strong>分の記録、肯定発言は合計<strong>${totalPositive}回</strong>（1日平均<strong>${avgFB}回</strong>）でした。<br>
+        自立に関する場面は<strong>${autonomy.total}件</strong>言及されています。${balanceMsg}<br>
+        ${fbMsg}
+      </div>
+    </div>`;
+}
+
+/* === 自立育成のハイライト === */
+function renderAutonomyHighlights(items) {
+  // 各日の自立言及数を計算
+  const itemsWithAutonomy = items.map(d => {
+    const text = [d.independence, d.independence_detail, d.growth, d.growth_detail].filter(Boolean).join(" ");
+    let autonomyHits = 0;
+    Object.values(AUTONOMY_AXES).forEach(keywords => {
+      keywords.forEach(kw => {
+        const m = text.match(new RegExp(escapeRegExp(kw), "g"));
+        if (m) autonomyHits += m.length;
+      });
+    });
+    return { ...d, autonomyHits };
+  });
+
+  const sortedByAutonomy = [...itemsWithAutonomy].sort((a, b) => b.autonomyHits - a.autonomyHits);
+  const sortedByFB = [...items].sort((a, b) => (b.positive_count || 0) - (a.positive_count || 0));
+
+  const topAutonomyDay = sortedByAutonomy[0];
+  const topFBDay = sortedByFB[0];
+
+  let highlights = "";
+
+  if (topAutonomyDay && topAutonomyDay.autonomyHits > 0) {
+    highlights += `<div class="highlight-item">🌱 <strong>自立場面が最も豊かな日:</strong> ${formatDateJP(topAutonomyDay.date)}（${topAutonomyDay.autonomyHits}件の言及）</div>`;
+  }
+  highlights += `<div class="highlight-item">🥇 <strong>肯定発言が最も多い日:</strong> ${formatDateJP(topFBDay.date)}（${topFBDay.positive_count}回）</div>`;
+
+  // 子どもの自走に関する記述があれば抽出
+  const selfRunDays = items.filter(d => {
+    const text = [d.good, d.good_detail, d.growth, d.growth_detail].filter(Boolean).join(" ");
+    return /自走|自分で(動|考)|不在|任せ|声かけ前/.test(text);
+  });
+  if (selfRunDays.length > 0) {
+    highlights += `<div class="highlight-item">⚡ <strong>子どもの自走場面:</strong> ${selfRunDays.length}日の記録に登場</div>`;
+  }
+
+  return `
+    <div class="section">
+      <div class="section-title">🏆 ハイライト</div>
+      <div class="highlight-box">${highlights}</div>
+    </div>`;
+}
+
+/* === 自立3軸のバランスチャート（タップ可能） === */
+function renderAutonomyChart(autonomy) {
+  const c = autonomy.counts;
+  const max = Math.max(c["主体性"], c["自己調整"], c["協働"], 1);
+
+  const axisInfo = [
+    { name: "主体性", emoji: "🎯", color: "#e74c3c" },
+    { name: "自己調整", emoji: "🔄", color: "#3498db" },
+    { name: "協働", emoji: "🤝", color: "#27ae60" }
+  ];
+  const isActive = (type, key) =>
+    expandedDrillDown && expandedDrillDown.type === type && expandedDrillDown.key === key;
+
+  const bars = axisInfo.map(({ name, emoji, color }) => {
+    const value = c[name];
+    const ratio = (value / max) * 100;
+    const dateCount = autonomy.dates[name].size;
+    const activeCls = isActive("autonomy", name) ? "active" : "";
+    return `
+      <div class="chart-bar-row clickable ${activeCls}" data-drill-type="autonomy" data-drill-key="${name}">
+        <div class="chart-bar-label">${emoji} ${name}</div>
+        <div class="chart-bar-track">
+          <div class="chart-bar-fill" style="width:${ratio}%; background:linear-gradient(90deg, ${color}, ${color}cc);"></div>
+        </div>
+        <div class="chart-bar-value">${value}件 / ${dateCount}日</div>
+      </div>`;
+  }).join("");
+
+  const drillPanel = (expandedDrillDown && expandedDrillDown.type === "autonomy")
+    ? renderDrillDownPanel(currentRangeItems || [])
+    : "";
+
+  return `
+    <div class="section">
+      <div class="section-title">🎯 「自立した学習者」3軸の育成バランス</div>
+      <div class="period-chart">${bars}</div>
+      <p style="font-size:0.78em; color:#95a5a6; margin-top:8px;">※ バーをタップで具体例を表示</p>
+      ${drillPanel}
+    </div>`;
+}
+
+/* === 指導の傾向分析 === */
+function renderPedagogyAnalysis(items) {
+  const themeHits = {};
+  items.forEach(d => {
+    const text = [d.improve, d.improve_detail, d.next, d.next_detail].filter(Boolean).join(" ");
+    Object.entries(PEDAGOGY_THEMES).forEach(([theme, keywords]) => {
+      const found = keywords.some(kw => text.includes(kw));
+      if (found) {
+        if (!themeHits[theme]) themeHits[theme] = new Set();
+        themeHits[theme].add(d.date);
+      }
+    });
+  });
+  const sorted = Object.entries(themeHits).sort((a, b) => b[1].size - a[1].size);
+  if (sorted.length === 0) return "";
+
+  const max = sorted[0][1].size;
+  const isActive = (type, key) =>
+    expandedDrillDown && expandedDrillDown.type === type && expandedDrillDown.key === key;
+  const bars = sorted.map(([theme, dates]) => {
+    const ratio = (dates.size / max) * 100;
+    const activeCls = isActive("pedagogy", theme) ? "active" : "";
+    return `
+      <div class="chart-bar-row clickable ${activeCls}" data-drill-type="pedagogy" data-drill-key="${theme}">
+        <div class="chart-bar-label" style="min-width:140px;">${theme}</div>
+        <div class="chart-bar-track">
+          <div class="chart-bar-fill" style="width:${ratio}%; background:linear-gradient(90deg, #f39c12, #e67e22);"></div>
+        </div>
+        <div class="chart-bar-value">${dates.size}日</div>
+      </div>`;
+  }).join("");
+
+  const drillPanel = (expandedDrillDown && expandedDrillDown.type === "pedagogy")
+    ? renderDrillDownPanel(items) : "";
+
+  return `
+    <div class="section">
+      <div class="section-title">🎓 指導の重点テーマ（改善点・次回課題から抽出）</div>
+      <div class="period-chart">${bars}</div>
+      <p style="font-size:0.78em; color:#95a5a6; margin-top:8px;">※ バーをタップで具体的な記述を表示</p>
+      ${drillPanel}
+    </div>`;
+}
+
+/* === 肯定発言の推移チャート === */
+function renderFBChart(items) {
+  if (items.length === 0) return "";
+  const sortedItems = [...items].sort((a, b) => new Date(a.date) - new Date(b.date));
+  const maxFB = Math.max(...sortedItems.map(d => d.positive_count || 0), 1);
+
+  const bars = sortedItems.map(d => {
+    const value = d.positive_count || 0;
+    const ratio = (value / maxFB) * 100;
+    return `
+      <div class="chart-bar-row">
+        <div class="chart-bar-label">${formatDateShort(d.date)}</div>
+        <div class="chart-bar-track">
+          <div class="chart-bar-fill" style="width:${ratio}%"></div>
+        </div>
+        <div class="chart-bar-value">${value}回</div>
+      </div>`;
+  }).join("");
+
+  return `
+    <div class="section">
+      <div class="section-title">📈 肯定発言の推移</div>
+      <div class="period-chart">${bars}</div>
+    </div>`;
+}
+
+/* === 教科別の登場回数チャート === */
+function renderSubjectChart(items) {
+  const subjectFreq = {};
+  items.forEach(d => {
+    d.subject.split(/[・、]/).forEach(s => {
+      const trimmed = s.trim();
+      if (trimmed) subjectFreq[trimmed] = (subjectFreq[trimmed] || 0) + 1;
+    });
+  });
+  const sorted = Object.entries(subjectFreq).sort((a, b) => b[1] - a[1]);
+  if (sorted.length === 0) return "";
+  const maxCount = sorted[0][1];
+
+  const bars = sorted.map(([s, n]) => {
+    const ratio = (n / maxCount) * 100;
+    return `
+      <div class="chart-bar-row">
+        <div class="chart-bar-label">${s}</div>
+        <div class="chart-bar-track">
+          <div class="chart-bar-fill" style="width:${ratio}%"></div>
+        </div>
+        <div class="chart-bar-value">${n}日</div>
+      </div>`;
+  }).join("");
+
+  return `
+    <div class="section">
+      <div class="section-title">📚 教科別の登場回数</div>
+      <div class="period-chart">${bars}</div>
+    </div>`;
+}
+
+/* === 自立を支えたキーフレーズ === */
+const PERIOD_KEYWORDS = [
+  "けテぶれ", "心マトリクス", "＋れ", "QNKS", "希望永続",
+  "自分への嘘", "自由進度", "大分析", "聞く", "試行錯誤",
+  "プロセス", "目と耳と心", "自走", "学級目標", "プラス点",
+  "節目", "メリハリ", "信頼", "自分で考え", "任せる"
+];
+function renderKeywordSection(items) {
+  const hits = {};
+  items.forEach(d => {
+    const allText = [
+      d.good, d.improve, d.growth, d.independence, d.next,
+      d.good_detail, d.improve_detail, d.growth_detail, d.independence_detail, d.next_detail
+    ].filter(Boolean).join(" ");
+    PERIOD_KEYWORDS.forEach(kw => {
+      if (allText.includes(kw)) {
+        if (!hits[kw]) hits[kw] = new Set();
+        hits[kw].add(d.date);
+      }
+    });
+  });
+  const sorted = Object.entries(hits).sort((a, b) => b[1].size - a[1].size);
+  if (sorted.length === 0) return "";
+
+  const tags = sorted.map(([kw, dates]) => `
+    <div class="keyword-tag" title="${[...dates].map(formatDateJP).join('\n')}">
+      <strong>${kw}</strong>
+      <span class="keyword-count">${dates.size}日</span>
+    </div>`).join("");
+
+  return `
+    <div class="section">
+      <div class="section-title">🔑 自立を支えたキーフレーズ</div>
+      <div class="keyword-grid">${tags}</div>
+      <p style="font-size:0.78em; color:#95a5a6; margin-top:6px;">※ 自立した学習者育成に関連する用語の登場日数</p>
+    </div>`;
+}
+
+/* === 半年/年用の長期トレンド === */
+function renderLongTermTrend(items, label) {
+  // 月ごとに集計
+  const monthlyStats = {};
+  items.forEach(d => {
+    const ym = d.date.substring(0, 7); // "2026-04"
+    if (!monthlyStats[ym]) {
+      monthlyStats[ym] = { count: 0, totalFB: 0 };
+    }
+    monthlyStats[ym].count++;
+    monthlyStats[ym].totalFB += d.positive_count || 0;
+  });
+  const months = Object.keys(monthlyStats).sort();
+  if (months.length < 2) return "";
+
+  const maxFB = Math.max(...months.map(m => monthlyStats[m].totalFB), 1);
+
+  const monthBars = months.map(m => {
+    const stats = monthlyStats[m];
+    const [y, mo] = m.split("-");
+    const label = `${y}年${parseInt(mo)}月`;
+    const ratio = (stats.totalFB / maxFB) * 100;
+    return `
+      <div class="chart-bar-row">
+        <div class="chart-bar-label">${label}</div>
+        <div class="chart-bar-track">
+          <div class="chart-bar-fill" style="width:${ratio}%"></div>
+        </div>
+        <div class="chart-bar-value">${stats.totalFB}回 / ${stats.count}日</div>
+      </div>`;
+  }).join("");
+
+  return `
+    <div class="section">
+      <div class="section-title">📊 月ごとの推移</div>
+      <div class="period-chart">${monthBars}</div>
+    </div>`;
+}
+
+/* 短い日付フォーマット（例：4/10）*/
+function formatDateShort(dateStr) {
+  const d = new Date(dateStr);
+  const dayNames = ["日", "月", "火", "水", "木", "金", "土"];
+  return `${d.getMonth() + 1}/${d.getDate()}(${dayNames[d.getDay()]})`;
+}
+
+/* ===== 期間範囲計算 ===== */
+function getWeekRange(dateStr) {
+  const d = new Date(dateStr);
+  const dayOfWeek = d.getDay();
+  const start = new Date(d); start.setDate(d.getDate() - dayOfWeek);
+  const end = new Date(start); end.setDate(start.getDate() + 6);
+  return { start, end };
+}
+function getMonthRange(dateStr) {
+  const d = new Date(dateStr);
+  const start = new Date(d.getFullYear(), d.getMonth(), 1);
+  const end = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+  return { start, end };
+}
+function getHalfRange(dateStr) {
+  const d = new Date(dateStr);
+  const start = new Date(d); start.setMonth(d.getMonth() - 5); start.setDate(1);
+  const end = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+  return { start, end };
+}
+function getYearRange(dateStr) {
+  const d = new Date(dateStr);
+  const start = new Date(d.getFullYear(), 0, 1);
+  const end = new Date(d.getFullYear(), 11, 31);
+  return { start, end };
+}
+
+/* ===== イベントリスナー ===== */
+document.getElementById("prevMonth").addEventListener("click", () => {
+  currentDate.setMonth(currentDate.getMonth() - 1);
+  renderCalendar();
+});
+document.getElementById("nextMonth").addEventListener("click", () => {
+  currentDate.setMonth(currentDate.getMonth() + 1);
+  renderCalendar();
+});
+document.getElementById("todayBtn").addEventListener("click", () => {
+  const today = new Date();
+  currentDate = new Date(today.getFullYear(), today.getMonth(), 1);
+  selectedDate = formatDate(today);
+  activeCategory = "すべて";
+  photosExpanded = false;
+  expandedSections = new Set();
+  expandedDrillDown = null;
+  renderCalendar();
+  renderDetail();
+});
+
+document.querySelectorAll(".period-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".period-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    currentPeriod = btn.dataset.period;
+    expandedDrillDown = null;  // 期間切替でリセット
+    renderDetail();
+  });
+});
+
+/* ============================================================
+   📓 Obsidian連携：Markdownエクスポート
+   ============================================================ */
+
+const OBSIDIAN_VAULT_KEY = "obsidian_vault_name_v1";
+
+/* Wikilink化するキーワード */
+const WIKILINK_KEYWORDS = [
+  "けテぶれ", "心マトリクス", "＋れ", "QNKS", "希望永続",
+  "自分への嘘", "自由進度", "大分析", "試行錯誤",
+  "目と耳と心", "プラス点", "学級目標", "節目", "メリハリ",
+  "主体性", "自己調整", "協働", "プロセス"
+];
+
+/* テキスト中のキーワードを Wikilink に変換 */
+function applyWikilinks(text) {
+  if (!text) return "";
+  let result = String(text);
+  WIKILINK_KEYWORDS.forEach(kw => {
+    // 既に [[ ]] で囲まれているものは置換しない
+    const re = new RegExp(`(?<!\\[\\[)${escapeRegExp(kw)}(?!\\]\\])`, "g");
+    result = result.replace(re, `[[${kw}]]`);
+  });
+  return result;
+}
+
+/* 1日分のデータをMarkdownに変換 */
+function generateDayMarkdown(data) {
+  const photos = getPhotosForDate(data.date);
+  const subjects = data.subject.split(/[・、]/).filter(Boolean);
+  const tags = ["授業分析", `${data.class}`, ...subjects.map(s => s.trim())];
+
+  // タグから検出されたキーワードも追加
+  const allText = [
+    data.good, data.improve, data.growth, data.independence, data.next,
+    data.good_detail, data.improve_detail, data.growth_detail,
+    data.independence_detail, data.next_detail
+  ].filter(Boolean).join(" ");
+  WIKILINK_KEYWORDS.forEach(kw => {
+    if (allText.includes(kw)) tags.push(kw.replace(/\s/g, ""));
+  });
+
+  // 重複除去
+  const uniqueTags = [...new Set(tags.filter(Boolean))];
+
+  // フロントマター
+  let md = `---\n`;
+  md += `date: ${data.date}\n`;
+  md += `class: ${data.class}\n`;
+  md += `subject: ${data.subject}\n`;
+  md += `positive_count: ${data.positive_count || 0}\n`;
+  md += `tags:\n`;
+  uniqueTags.forEach(t => md += `  - ${t}\n`);
+  md += `---\n\n`;
+
+  // タイトル
+  md += `# ${formatDateJP(data.date)} 授業分析\n\n`;
+
+  // 概要
+  md += `## 📚 概要\n`;
+  md += `- **クラス**: ${data.class}\n`;
+  md += `- **教科**: ${data.subject}\n`;
+  md += `- **肯定発言数**: ${data.positive_count || 0}回\n`;
+  md += `- **写真**: ${photos.length}枚\n\n`;
+
+  // 各セクション
+  const sections = [
+    { title: "🌟 よかったところ", short: data.good, detail: data.good_detail },
+    { title: "🔧 改善点", short: data.improve, detail: data.improve_detail },
+    { title: "🌱 成長の記録", short: data.growth, detail: data.growth_detail },
+    { title: "🎯 自立した学習者との関連", short: data.independence, detail: data.independence_detail },
+    { title: "📋 次回への課題", short: data.next, detail: data.next_detail }
+  ];
+
+  sections.forEach(s => {
+    if (!s.short && !s.detail) return;
+    md += `## ${s.title}\n\n`;
+    if (s.short) md += applyWikilinks(s.short) + "\n\n";
+    if (s.detail) {
+      md += `### 詳細\n\n`;
+      md += applyWikilinks(s.detail) + "\n\n";
+    }
+  });
+
+  // 研究視点
+  md += `## 🔬 動機×自己調整の研究視点\n\n`;
+  if (data.motivation || data.motivation_detail) {
+    md += `### 🌊 動機（やりたさ）の状態\n${applyWikilinks(data.motivation || "")}\n\n`;
+    if (data.motivation_detail) md += applyWikilinks(data.motivation_detail) + "\n\n";
+  }
+  if (data.self_regulation || data.self_regulation_detail) {
+    md += `### 🎯 自己調整の実態\n${applyWikilinks(data.self_regulation || "")}\n\n`;
+    if (data.self_regulation_detail) md += applyWikilinks(data.self_regulation_detail) + "\n\n";
+  }
+  if (data.transition || data.transition_detail) {
+    md += `### 🔄 動機→自己調整の移行\n${applyWikilinks(data.transition || "")}\n\n`;
+    if (data.transition_detail) md += applyWikilinks(data.transition_detail) + "\n\n";
+  }
+  if (data.teacher_intervention || data.teacher_intervention_detail) {
+    md += `### 👨‍🏫 教師の関わりの影響\n${applyWikilinks(data.teacher_intervention || "")}\n\n`;
+    if (data.teacher_intervention_detail) md += applyWikilinks(data.teacher_intervention_detail) + "\n\n";
+  }
+  if (data.hypothesis) {
+    md += `### 💭 仮説\n${applyWikilinks(data.hypothesis)}\n\n`;
+  }
+
+  // 写真（参照のみ。実体はダッシュボード or ローカルに）
+  if (photos.length > 0) {
+    md += `## 📷 写真（${photos.length}枚）\n\n`;
+    photos.forEach(p => {
+      md += `- **${p.category}**${p.caption ? ` - ${p.caption}` : ""}\n`;
+    });
+    md += `\n> 写真の実体はダッシュボード上で閲覧できます。\n\n`;
+  }
+
+  // 関連リンク
+  md += `## 🔗 関連\n`;
+  md += `- [[4月総括レポート]]\n`;
+  md += `- [[5月戦略プラン]]\n`;
+  uniqueTags.filter(t => WIKILINK_KEYWORDS.includes(t)).forEach(t => {
+    md += `- [[${t}]]\n`;
+  });
+  md += `\n---\n*生成日: ${new Date().toISOString().split("T")[0]} - 授業分析ダッシュボードより*\n`;
+
+  return md;
+}
+
+/* インデックスノート（README）の生成 */
+function generateIndexMarkdown() {
+  const sorted = [...ANALYSIS_DATA].sort((a, b) => new Date(a.date) - new Date(b.date));
+  let md = `---\ntags: [授業分析, インデックス]\n---\n\n`;
+  md += `# 授業分析インデックス\n\n`;
+  md += `6年4組 / 自立した学習者育成プロジェクト\n\n`;
+  md += `## 📅 全エントリ\n\n`;
+  sorted.forEach(d => {
+    md += `- [[${d.date}]] ${formatDateJP(d.date)} - ${d.subject}（FB: ${d.positive_count || 0}回）\n`;
+  });
+  md += `\n## 🔑 主要キーフレーズ\n\n`;
+  WIKILINK_KEYWORDS.forEach(kw => {
+    md += `- [[${kw}]]\n`;
+  });
+  md += `\n## 📊 関連文書\n`;
+  md += `- [[4月総括レポート]]\n- [[5月戦略プラン]]\n`;
+  return md;
+}
+
+/* ファイルダウンロード */
+function downloadFile(filename, content) {
+  const blob = new Blob([content], { type: "text/markdown;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+/* クリップボードにコピー */
+async function copyToClipboard(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch (e) {
+    // フォールバック
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+      return true;
+    } catch (e2) {
+      document.body.removeChild(ta);
+      return false;
+    }
+  }
+}
+
+/* ============================================================
+   📥 ユーザー入力データの管理（Obsidianから取り込み）
+   ============================================================ */
+const USER_ENTRIES_KEY = "user_analysis_entries_v1";
+
+function loadUserEntries() {
+  try {
+    return JSON.parse(localStorage.getItem(USER_ENTRIES_KEY) || "[]");
+  } catch {
+    return [];
+  }
+}
+function saveUserEntries(entries) {
+  localStorage.setItem(USER_ENTRIES_KEY, JSON.stringify(entries));
+}
+function addUserEntry(data) {
+  const entries = loadUserEntries();
+  const idx = entries.findIndex(e => e.date === data.date);
+  if (idx >= 0) {
+    entries[idx] = { ...entries[idx], ...data, _userEntry: true };
+  } else {
+    entries.push({ ...data, _userEntry: true });
+  }
+  saveUserEntries(entries);
+}
+function deleteUserEntry(date) {
+  const entries = loadUserEntries().filter(e => e.date !== date);
+  saveUserEntries(entries);
+}
+
+/* 既存の getDataByDate / getDataInRange をラップして
+   組み込みデータとユーザー入力データを統合 */
+const _origGetDataByDate = getDataByDate;
+const _origGetDataInRange = getDataInRange;
+
+getDataByDate = function(dateStr) {
+  const userEntries = loadUserEntries();
+  const userMatch = userEntries.find(e => e.date === dateStr);
+  const builtin = _origGetDataByDate(dateStr);
+  // ユーザーデータが優先（同じ日付なら上書き）
+  if (userMatch && builtin) return { ...builtin, ...userMatch, _userEntry: true };
+  return userMatch || builtin;
+};
+
+getDataInRange = function(startDate, endDate) {
+  const builtin = _origGetDataInRange(startDate, endDate);
+  const userEntries = loadUserEntries();
+  const userInRange = userEntries.filter(e => {
+    const date = new Date(e.date);
+    return date >= startDate && date <= endDate;
+  });
+  // 重複排除（ユーザー優先）
+  const merged = [...builtin];
+  userInRange.forEach(u => {
+    const idx = merged.findIndex(b => b.date === u.date);
+    if (idx >= 0) merged[idx] = { ...merged[idx], ...u, _userEntry: true };
+    else merged.push(u);
+  });
+  return merged.sort((a, b) => new Date(a.date) - new Date(b.date));
+};
+
+/* ============================================================
+   Markdown 解析（YAMLフロントマター + セクション）
+   ============================================================ */
+function parseMarkdown(md) {
+  // フロントマター抽出
+  const fmMatch = md.match(/^---\s*\n([\s\S]*?)\n---\s*\n([\s\S]*)$/);
+  if (!fmMatch) {
+    throw new Error("YAMLフロントマター（--- で挟まれた部分）が見つかりません");
+  }
+  const fm = parseSimpleYaml(fmMatch[1]);
+  const body = fmMatch[2];
+
+  if (!fm.date) {
+    throw new Error("date フィールドが必須です（例：date: 2026-05-07）");
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fm.date)) {
+    throw new Error("date は YYYY-MM-DD 形式で指定してください");
+  }
+
+  // セクション分割（## で始まる）
+  const sections = {};
+  const lines = body.split("\n");
+  let currentTitle = null;
+  let buffer = [];
+  let inDetail = false;
+  let detailBuffer = [];
+
+  function flushSection() {
+    if (currentTitle) {
+      sections[currentTitle] = {
+        short: buffer.join("\n").trim(),
+        detail: detailBuffer.length > 0 ? detailBuffer.join("\n").trim() : ""
+      };
+    }
+  }
+
+  lines.forEach(line => {
+    const h2 = line.match(/^##\s+(.+?)\s*$/);
+    const h3 = line.match(/^###\s+(.+?)\s*$/);
+    if (h2) {
+      flushSection();
+      currentTitle = h2[1].trim();
+      buffer = [];
+      detailBuffer = [];
+      inDetail = false;
+    } else if (h3 && /詳細|詳しく/.test(h3[1])) {
+      inDetail = true;
+    } else if (currentTitle) {
+      if (inDetail) detailBuffer.push(line);
+      else buffer.push(line);
+    }
+  });
+  flushSection();
+
+  // セクション名 → フィールド名のマッピング
+  const sectionMap = {
+    "よかったところ": "good",
+    "改善点": "improve",
+    "成長の記録": "growth",
+    "自立した学習者との関連": "independence",
+    "次回への課題": "next",
+    "動機（やりたさ）の状態": "motivation",
+    "動機の状態": "motivation",
+    "やりたさ": "motivation",
+    "自己調整の実態": "self_regulation",
+    "自己調整": "self_regulation",
+    "動機→自己調整の移行": "transition",
+    "移行": "transition",
+    "教師の関わりの影響": "teacher_intervention",
+    "教師の関わり": "teacher_intervention",
+    "仮説": "hypothesis"
+  };
+
+  const data = {
+    date: fm.date,
+    class: fm.class || "",
+    subject: fm.subject || "",
+    positive_count: parseInt(fm.positive_count) || 0,
+    photos: []
+  };
+
+  // 絵文字や記号を除去してマッチ
+  Object.entries(sections).forEach(([title, content]) => {
+    const cleaned = title.replace(/[^぀-ゟ゠-ヿ一-龯a-zA-Z（）()→\s]/g, "").trim();
+    let matchedField = null;
+    Object.entries(sectionMap).forEach(([key, field]) => {
+      if (cleaned.includes(key)) matchedField = field;
+    });
+    if (matchedField) {
+      data[matchedField] = content.short;
+      if (content.detail) data[matchedField + "_detail"] = content.detail;
+    }
+  });
+
+  return data;
+}
+
+/* シンプルなYAML解析（key: value のみ） */
+function parseSimpleYaml(yamlText) {
+  const result = {};
+  const lines = yamlText.split("\n");
+  let currentKey = null;
+  lines.forEach(line => {
+    if (line.match(/^\s*-\s+/)) {
+      // リストアイテム（タグなど）
+      if (currentKey) {
+        if (!Array.isArray(result[currentKey])) result[currentKey] = [];
+        result[currentKey].push(line.replace(/^\s*-\s+/, "").trim());
+      }
+    } else {
+      const m = line.match(/^([a-zA-Z_]+)\s*:\s*(.*)$/);
+      if (m) {
+        const key = m[1];
+        const val = m[2].trim();
+        if (val === "") {
+          currentKey = key;
+          result[key] = [];
+        } else {
+          currentKey = null;
+          result[key] = val.replace(/^["']|["']$/g, "");
+        }
+      }
+    }
+  });
+  return result;
+}
+
+/* テンプレート生成 */
+function generateImportTemplate() {
+  const today = new Date().toISOString().split("T")[0];
+  return `---
+date: ${today}
+class: 6年4組
+subject: 国語・算数
+positive_count: 0
+tags:
+  - 授業分析
+---
+
+# ${today} 授業分析
+
+## よかったところ
+（短いサマリ：1〜2文）
+
+### 詳細
+（より詳しい分析、教師の発話の引用など）
+**強調したい部分**
+> 引用したい発話
+*ハイライトしたい言葉*
+
+## 改善点
+（短いサマリ）
+
+### 詳細
+（理由付きの改善案）
+
+## 成長の記録
+（教師と子どもの成長）
+
+### 詳細
+
+
+## 自立した学習者との関連
+（主体性／自己調整／協働の3軸）
+
+### 詳細
+
+
+## 次回への課題
+（具体的なアクション）
+
+### 詳細
+
+
+## 動機（やりたさ）の状態
+（🟢/🟡/🔴 + 場面）
+
+### 詳細
+
+
+## 自己調整の実態
+（4タイプ別の観察：やりたくないが取り組む／試行錯誤／目標調整／感情を乗り越える）
+
+### 詳細
+
+
+## 動機→自己調整の移行
+（移行のきっかけ）
+
+### 詳細
+
+
+## 教師の関わりの影響
+（4類型：問いかけ／待つ／評価／環境設計）
+
+### 詳細
+
+
+## 仮説
+（この日から得られる仮説）
+`;
+}
+
+/* === Obsidian連携モーダルのイベント === */
+// データ管理メニューはUIから撤去済み。互換のためモーダルのDOMは残すが起動口はなし。
+const _dataMenuBtn = document.getElementById("dataMenuBtn");
+if (_dataMenuBtn) _dataMenuBtn.addEventListener("click", () => {
+  document.getElementById("obsidianModal").classList.add("show");
+});
+const _closeObsidianModal = document.getElementById("closeObsidianModal");
+if (_closeObsidianModal) _closeObsidianModal.addEventListener("click", () => {
+  document.getElementById("obsidianModal").classList.remove("show");
+});
+
+document.querySelectorAll(".obsidian-export-btn").forEach(btn => {
+  btn.addEventListener("click", async () => {
+    const action = btn.dataset.action;
+
+    if (action === "export-current" || action === "copy-current") {
+      if (!selectedDate) {
+        alert("日付を選んでから実行してください。");
+        return;
+      }
+      const data = getDataByDate(selectedDate);
+      if (!data) {
+        alert("この日のデータがありません。");
+        return;
+      }
+      const md = generateDayMarkdown(data);
+      if (action === "export-current") {
+        downloadFile(`${data.date}.md`, md);
+      } else {
+        const ok = await copyToClipboard(md);
+        alert(ok ? "✅ クリップボードにコピーしました。Obsidianに貼り付けてください。" : "コピーに失敗しました。");
+      }
+    } else if (action === "export-all") {
+      // 全エントリを順次ダウンロード（ユーザー追加分も含む）
+      const allData = getDataInRange(new Date(2000, 0, 1), new Date(2099, 11, 31));
+      const total = allData.length;
+      if (!confirm(`全 ${total} エントリ + インデックスを順次ダウンロードします。よろしいですか？`)) return;
+
+      downloadFile("_index.md", generateIndexMarkdown());
+      allData.forEach((d, i) => {
+        setTimeout(() => {
+          downloadFile(`${d.date}.md`, generateDayMarkdown(d));
+        }, (i + 1) * 250);
+      });
+      setTimeout(() => {
+        alert(`✅ ${total + 1} ファイルのダウンロードを開始しました。`);
+      }, (total + 1) * 250 + 100);
+    } else if (action === "download-template") {
+      downloadFile("授業分析テンプレート.md", generateImportTemplate());
+      alert("✅ テンプレートをダウンロードしました。\nObsidianで開いて記入してください。");
+    } else if (action === "import-markdown") {
+      document.getElementById("obsidianModal").classList.remove("show");
+      document.getElementById("importModal").classList.add("show");
+      document.getElementById("importTextarea").value = "";
+      document.getElementById("importPreview").style.display = "none";
+    } else if (action === "manage-imports") {
+      document.getElementById("obsidianModal").classList.remove("show");
+      showManageImports();
+    }
+  });
+});
+
+/* === 取り込み処理 === */
+document.getElementById("cancelImport").addEventListener("click", () => {
+  document.getElementById("importModal").classList.remove("show");
+});
+
+document.getElementById("parseImport").addEventListener("click", () => {
+  const text = document.getElementById("importTextarea").value.trim();
+  if (!text) {
+    alert("Markdownを貼り付けてください。");
+    return;
+  }
+  try {
+    const data = parseMarkdown(text);
+    // プレビュー表示
+    const preview = document.getElementById("importPreview");
+    preview.style.display = "block";
+    const fields = Object.keys(data).filter(k => data[k] && k !== "photos" && k !== "_userEntry");
+    preview.innerHTML = `
+      <strong>✅ 解析成功</strong><br>
+      日付: <strong>${data.date}</strong> ／ クラス: ${data.class || "（未指定）"} ／ 教科: ${data.subject || "（未指定）"}<br>
+      検出されたフィールド: ${fields.length}個（${fields.join(", ")}）
+    `;
+    if (!confirm(`${data.date} のデータとして取り込みます。\n\n同じ日付のユーザー入力データがあれば上書きされます。\nよろしいですか？`)) return;
+    addUserEntry(data);
+    document.getElementById("importModal").classList.remove("show");
+    selectedDate = data.date;
+    const d = new Date(data.date);
+    currentDate = new Date(d.getFullYear(), d.getMonth(), 1);
+    renderCalendar();
+    renderDetail();
+    setTimeout(() => alert("✅ 取り込み完了！カレンダーで該当日が選択されました。"), 100);
+  } catch (e) {
+    alert("⚠️ 解析エラー：" + e.message);
+  }
+});
+
+/* === 管理ダイアログ === */
+function showManageImports() {
+  const entries = loadUserEntries();
+  const modal = document.getElementById("manageImportsModal");
+  const list = document.getElementById("manageImportsList");
+  if (entries.length === 0) {
+    list.innerHTML = `<div style="text-align:center; color:#95a5a6; padding:30px;">取り込んだデータはまだありません。</div>`;
+  } else {
+    const sorted = [...entries].sort((a, b) => new Date(b.date) - new Date(a.date));
+    list.innerHTML = sorted.map(e => `
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 12px; border:1px solid #e1e8ed; border-radius:8px; margin-bottom:6px;">
+        <div>
+          <div style="font-weight:700; color:#2c3e50;">${formatDateJP(e.date)}</div>
+          <div style="font-size:0.8em; color:#7f8c8d;">${e.subject || "（教科未指定）"}</div>
+        </div>
+        <button data-delete-date="${e.date}" style="padding:6px 12px; background:#e74c3c; color:white; border:none; border-radius:6px; cursor:pointer; font-size:0.85em;">削除</button>
+      </div>
+    `).join("");
+    list.querySelectorAll("[data-delete-date]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const date = btn.dataset.deleteDate;
+        if (confirm(`${date} のデータを削除しますか？`)) {
+          deleteUserEntry(date);
+          showManageImports();
+          renderCalendar();
+          renderDetail();
+        }
+      });
+    });
+  }
+  modal.classList.add("show");
+}
+document.getElementById("closeManageImports").addEventListener("click", () => {
+  document.getElementById("manageImportsModal").classList.remove("show");
+});
+
+/* ===== ⚙️ 設定モーダルのイベント ===== */
+function updatePatStatus() {
+  const status = document.getElementById("patStatus");
+  const settingsBtn = document.getElementById("settingsBtn");
+  const input = document.getElementById("patInput");
+  const pat = getGitHubPAT();
+  if (pat) {
+    status.textContent = "✓ 設定済み";
+    status.style.background = "#e8f5e9";
+    status.style.color = "#2e7d32";
+    settingsBtn.classList.remove("unconfigured");
+    input.value = "•".repeat(20);
+  } else {
+    status.textContent = "未設定";
+    status.style.background = "#fff3e0";
+    status.style.color = "#e65100";
+    settingsBtn.classList.add("unconfigured");
+    input.value = "";
+  }
+  updateBulkSyncCount();
+}
+
+/* ローカル写真の枚数を表示 */
+function updateBulkSyncCount() {
+  const el = document.getElementById("bulkSyncCount");
+  if (!el) return;
+  let count = 0;
+  for (const dateStr in photoCacheByDate) {
+    count += photoCacheByDate[dateStr].length;
+  }
+  if (count === 0) {
+    el.textContent = "📸 このデバイスのローカル写真：なし";
+    el.style.color = "#95a5a6";
+  } else {
+    el.textContent = `📸 このデバイスのローカル写真：${count}枚`;
+    el.style.color = "#5a6c7d";
+  }
+}
+
+/* 一括アップロード処理（マニフェスト更新は最後に1回だけ） */
+async function bulkUploadAllLocal() {
+  const pat = getGitHubPAT();
+  if (!pat) {
+    alert("先にGitHub PATを設定してください。");
+    return;
+  }
+
+  // 全ローカル写真を集める（コピーを取る：途中でphotoCacheByDateが変化するため）
+  const allLocal = [];
+  for (const dateStr in photoCacheByDate) {
+    for (const photo of photoCacheByDate[dateStr]) {
+      allLocal.push({ photo, dateStr });
+    }
+  }
+
+  if (allLocal.length === 0) {
+    alert("クラウドにアップロードするローカル写真がありません。");
+    return;
+  }
+
+  if (!confirm(`${allLocal.length}枚の写真をクラウド（GitHub）にアップロードします。\n通信状況によっては数分かかります。続けますか？`)) {
+    return;
+  }
+
+  const btn = document.getElementById("bulkSyncBtn");
+  const progress = document.getElementById("bulkSyncProgress");
+  btn.disabled = true;
+  btn.style.opacity = "0.6";
+
+  // ステップ1：現在のマニフェストを1回だけ取得
+  progress.textContent = "📋 クラウドの目録を取得中...";
+  let manifest = {};
+  let manifestSha = null;
+  try {
+    const existing = await ghGetFile(CLOUD_MANIFEST_PATH, pat);
+    if (existing) {
+      manifestSha = existing.sha;
+      manifest = JSON.parse(base64ToUtf8(existing.content));
+    }
+  } catch (e) {
+    btn.disabled = false;
+    btn.style.opacity = "1";
+    progress.textContent = `❌ 目録の取得に失敗：${e.message}`;
+    alert(`目録の取得に失敗しました。PATの権限（repo）を確認してください。\n\nエラー: ${e.message}`);
+    return;
+  }
+
+  // ステップ2：写真ファイルを順番にアップロード（マニフェストは触らない）
+  let success = 0;
+  let failed = 0;
+  const succeeded = []; // {dateStr, photoId} の配列
+
+  for (let i = 0; i < allLocal.length; i++) {
+    const { photo, dateStr } = allLocal[i];
+    progress.textContent = `📤 ${i + 1} / ${allLocal.length} 枚目をアップロード中...`;
+    try {
+      const base64 = photo.url.split(',')[1];
+      const timestamp = Date.now() + i; // ユニーク化（同ミリ秒の衝突回避）
+      const filename = `${timestamp}.jpg`;
+      const path = `photos/${dateStr}/${filename}`;
+
+      await ghPutFile(path, base64, `Add photo: ${dateStr} ${photo.category}`, pat);
+
+      // ローカルmanifestのコピーに追加（GitHubには後でまとめて反映）
+      if (!manifest[dateStr]) manifest[dateStr] = [];
+      manifest[dateStr].push({
+        url: path,
+        category: photo.category,
+        caption: photo.caption || "",
+        timestamp: timestamp
+      });
+
+      succeeded.push({ dateStr, photoId: photo.id });
+      success++;
+    } catch (e) {
+      console.error(`写真アップロード失敗 (${i + 1}/${allLocal.length}):`, e);
+      failed++;
+      // 連続して失敗が続く場合は早めに諦める（PAT間違いなどの可能性）
+      if (failed >= 5 && success === 0) {
+        progress.textContent = `❌ 連続失敗。中断します。PATを確認してください。`;
+        btn.disabled = false;
+        btn.style.opacity = "1";
+        alert(`連続でアップロードに失敗しました。\nPATの権限（repo フル）が正しいか、⚙️設定で確認してください。`);
+        return;
+      }
+    }
+  }
+
+  // ステップ3：マニフェストを1回だけ更新（リトライあり）
+  if (success > 0) {
+    progress.textContent = `📋 目録を更新中...`;
+    let manifestUpdated = false;
+    let lastError = null;
+    for (let attempt = 0; attempt < 4; attempt++) {
+      try {
+        // 2回目以降は最新のshaを取り直して衝突を避ける
+        if (attempt > 0) {
+          const fresh = await ghGetFile(CLOUD_MANIFEST_PATH, pat);
+          if (fresh) {
+            manifestSha = fresh.sha;
+            // 他デバイスからの更新があるかもしれないのでマージ
+            const freshManifest = JSON.parse(base64ToUtf8(fresh.content));
+            for (const dateStr in freshManifest) {
+              if (!manifest[dateStr]) {
+                manifest[dateStr] = freshManifest[dateStr];
+              } else {
+                // 自分が今追加したエントリと既存エントリをまとめる（重複しないようtimestampで判定）
+                const existingTs = new Set(manifest[dateStr].map(p => p.timestamp));
+                for (const p of freshManifest[dateStr]) {
+                  if (!existingTs.has(p.timestamp)) manifest[dateStr].push(p);
+                }
+              }
+            }
+          }
+        }
+        const newContent = utf8ToBase64(JSON.stringify(manifest, null, 2));
+        await ghPutFile(CLOUD_MANIFEST_PATH, newContent, `Bulk sync ${success} photos`, pat, manifestSha);
+        manifestUpdated = true;
+        cloudPhotosByDate = manifest;
+        break;
+      } catch (e) {
+        lastError = e;
+        console.warn(`目録更新試行 ${attempt + 1} 失敗:`, e.message);
+        if (attempt < 3) await new Promise(r => setTimeout(r, 1000 + attempt * 1000));
+      }
+    }
+
+    if (manifestUpdated) {
+      // 成功した写真のローカルコピーを削除
+      for (const { dateStr, photoId } of succeeded) {
+        try { await deleteUserPhoto(dateStr, photoId); } catch (e) { /* 無視 */ }
+      }
+    } else {
+      btn.disabled = false;
+      btn.style.opacity = "1";
+      progress.textContent = `⚠️ 写真は上がりましたが目録更新に失敗`;
+      alert(`写真ファイルは ${success}枚アップロードできましたが、目録の最終更新に失敗しました。\n\nエラー: ${lastError ? lastError.message : "unknown"}\n\nもう一度ボタンを押して再試行してください（重複登録は自動でマージされます）。`);
+      return;
+    }
+  }
+
+  btn.disabled = false;
+  btn.style.opacity = "1";
+  renderCalendar();
+  renderDetail();
+  updateBulkSyncCount();
+
+  if (failed === 0) {
+    progress.textContent = `✅ 完了：${success}枚すべてアップロードできました`;
+    alert(`✅ ${success}枚すべてアップロードできました！\nMacBookで開けば見られます。`);
+  } else {
+    progress.textContent = `完了：成功 ${success}枚 / 失敗 ${failed}枚`;
+    alert(`成功: ${success}枚\n失敗: ${failed}枚\n\n失敗した写真は手動で☁️ボタンから再試行できます。`);
+  }
+}
+
+document.getElementById("settingsBtn").addEventListener("click", () => {
+  document.getElementById("settingsModal").classList.add("show");
+  updatePatStatus();
+});
+document.getElementById("closeSettings").addEventListener("click", () => {
+  document.getElementById("settingsModal").classList.remove("show");
+});
+document.getElementById("savePat").addEventListener("click", () => {
+  const input = document.getElementById("patInput");
+  const val = input.value.trim();
+  if (!val || val.startsWith("•")) {
+    alert("PATを入力してください。");
+    return;
+  }
+  if (!val.startsWith("ghp_") && !val.startsWith("github_pat_")) {
+    if (!confirm("これは正しいGitHub PATの形式ではない可能性があります。それでも保存しますか？")) return;
+  }
+  setGitHubPAT(val);
+  updatePatStatus();
+  alert("✅ 保存しました。これでクラウド保存が使えます。");
+});
+document.getElementById("clearPat").addEventListener("click", () => {
+  if (confirm("PATを削除します。今後クラウド保存は無効になります。")) {
+    setGitHubPAT(null);
+    updatePatStatus();
+  }
+});
+document.getElementById("bulkSyncBtn").addEventListener("click", bulkUploadAllLocal);
+
+// 初期描画（IndexedDB の準備を待ってから）
+(async function init() {
+  try {
+    await openDB();
+    await migrateFromLocalStorage();
+    await refreshPhotoCache();
+    await loadCloudPhotos(); // クラウド側のmanifestを取得
+  } catch (e) {
+    console.error("ストレージ初期化失敗:", e);
+  }
+  updatePatStatus();
+
+  // 起動時：今日の日付の月を表示
+  const today = new Date();
+  currentDate = new Date(today.getFullYear(), today.getMonth(), 1);
+
+  // 今日のデータがあれば選択、なければ未選択（今日の月を表示するだけ）
+  const todayStr = formatDate(today);
+  if (getDataByDate(todayStr)) {
+    selectedDate = todayStr;
+  } else {
+    selectedDate = null;
+  }
+
+  renderCalendar();
+  renderDetail();
+})();
+</script>
+</body>
+</html>
