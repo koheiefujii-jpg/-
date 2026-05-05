@@ -1284,8 +1284,19 @@
         </div>
       </details>
 
+      <!-- 一括クラウド同期 -->
+      <div style="background:#fff8e1; border-radius:8px; padding:14px; margin-top:14px; margin-bottom:14px; border-left:3px solid #f39c12;">
+        <strong style="color:#2c3e50; font-size:0.95em;">📤 ローカル写真の一括同期</strong>
+        <p style="font-size:0.82em; color:#5a6c7d; margin:8px 0 10px; line-height:1.6;">
+          このデバイスにだけ保存されている写真を、まとめてクラウドにアップロードします。完了すれば他のデバイスからも見られます。
+        </p>
+        <div id="bulkSyncCount" style="font-size:0.82em; color:#5a6c7d; margin-bottom:8px;"></div>
+        <button id="bulkSyncBtn" style="width:100%; padding:10px; background:#f39c12; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.9em;">📤 ローカル写真をすべてクラウドへ</button>
+        <div id="bulkSyncProgress" style="font-size:0.8em; color:#5a6c7d; margin-top:8px; min-height:1em;"></div>
+      </div>
+
       <p style="font-size:0.78em; color:#95a5a6; margin-top:12px; line-height:1.6;">
-        💡 設定後、ローカル保存した写真にマウスオーバーすると「☁️」ボタンが現れます。タップでGitHubに保存され、他のデバイスからも見られます。
+        💡 PAT設定後は、これから追加する写真は自動でクラウドに保存されます。過去の写真は上の「📤 一括同期」ボタンでまとめてアップロードできます。
       </p>
     </div>
     <div class="actions">
@@ -3073,6 +3084,19 @@ async function addUserPhoto(dateStr, photo) {
     if (!photoCacheByDate[dateStr]) photoCacheByDate[dateStr] = [];
     photoCacheByDate[dateStr].push(newPhoto);
     cachedStorageUsage += getDataUrlSize(newPhoto.url || "");
+
+    // PATが設定されていれば、バックグラウンドで自動アップロード
+    if (getGitHubPAT()) {
+      uploadPhotoToCloud(newPhoto, dateStr)
+        .then(async () => {
+          await deleteUserPhoto(dateStr, id);
+          renderCalendar();
+          renderDetail();
+        })
+        .catch(err => {
+          console.warn("自動クラウド同期に失敗（手動☁️で再試行できます）:", err.message);
+        });
+    }
     return true;
   } catch (e) {
     alert(
@@ -5129,6 +5153,85 @@ function updatePatStatus() {
     settingsBtn.classList.add("unconfigured");
     input.value = "";
   }
+  updateBulkSyncCount();
+}
+
+/* ローカル写真の枚数を表示 */
+function updateBulkSyncCount() {
+  const el = document.getElementById("bulkSyncCount");
+  if (!el) return;
+  let count = 0;
+  for (const dateStr in photoCacheByDate) {
+    count += photoCacheByDate[dateStr].length;
+  }
+  if (count === 0) {
+    el.textContent = "📸 このデバイスのローカル写真：なし";
+    el.style.color = "#95a5a6";
+  } else {
+    el.textContent = `📸 このデバイスのローカル写真：${count}枚`;
+    el.style.color = "#5a6c7d";
+  }
+}
+
+/* 一括アップロード処理 */
+async function bulkUploadAllLocal() {
+  const pat = getGitHubPAT();
+  if (!pat) {
+    alert("先にGitHub PATを設定してください。");
+    return;
+  }
+
+  // 全ローカル写真を集める（コピーを取る：途中でphotoCacheByDateが変化するため）
+  const allLocal = [];
+  for (const dateStr in photoCacheByDate) {
+    for (const photo of photoCacheByDate[dateStr]) {
+      allLocal.push({ photo, dateStr });
+    }
+  }
+
+  if (allLocal.length === 0) {
+    alert("クラウドにアップロードするローカル写真がありません。");
+    return;
+  }
+
+  if (!confirm(`${allLocal.length}枚の写真をクラウド（GitHub）にアップロードします。\n通信状況によっては数分かかります。続けますか？`)) {
+    return;
+  }
+
+  const btn = document.getElementById("bulkSyncBtn");
+  const progress = document.getElementById("bulkSyncProgress");
+  btn.disabled = true;
+  btn.style.opacity = "0.6";
+
+  let success = 0;
+  let failed = 0;
+
+  for (let i = 0; i < allLocal.length; i++) {
+    const { photo, dateStr } = allLocal[i];
+    progress.textContent = `📤 ${i + 1} / ${allLocal.length} 枚目をアップロード中...`;
+    try {
+      await uploadPhotoToCloud(photo, dateStr);
+      await deleteUserPhoto(dateStr, photo.id);
+      success++;
+    } catch (e) {
+      console.error("アップロード失敗:", e);
+      failed++;
+    }
+  }
+
+  btn.disabled = false;
+  btn.style.opacity = "1";
+  renderCalendar();
+  renderDetail();
+  updateBulkSyncCount();
+
+  if (failed === 0) {
+    progress.textContent = `✅ 完了：${success}枚すべてアップロードできました`;
+    alert(`✅ ${success}枚すべてアップロードできました！\nMacBookで開けば見られます。`);
+  } else {
+    progress.textContent = `完了：成功 ${success}枚 / 失敗 ${failed}枚`;
+    alert(`成功: ${success}枚\n失敗: ${failed}枚\n\n失敗した写真は手動で☁️ボタンから再試行できます。`);
+  }
 }
 
 document.getElementById("settingsBtn").addEventListener("click", () => {
@@ -5158,6 +5261,7 @@ document.getElementById("clearPat").addEventListener("click", () => {
     updatePatStatus();
   }
 });
+document.getElementById("bulkSyncBtn").addEventListener("click", bulkUploadAllLocal);
 
 // 初期描画（IndexedDB の準備を待ってから）
 (async function init() {
