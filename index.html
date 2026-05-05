@@ -5173,7 +5173,7 @@ function updateBulkSyncCount() {
   }
 }
 
-/* 一括アップロード処理 */
+/* 一括アップロード処理（マニフェスト更新は最後に1回だけ） */
 async function bulkUploadAllLocal() {
   const pat = getGitHubPAT();
   if (!pat) {
@@ -5203,19 +5203,115 @@ async function bulkUploadAllLocal() {
   btn.disabled = true;
   btn.style.opacity = "0.6";
 
+  // ステップ1：現在のマニフェストを1回だけ取得
+  progress.textContent = "📋 クラウドの目録を取得中...";
+  let manifest = {};
+  let manifestSha = null;
+  try {
+    const existing = await ghGetFile(CLOUD_MANIFEST_PATH, pat);
+    if (existing) {
+      manifestSha = existing.sha;
+      manifest = JSON.parse(base64ToUtf8(existing.content));
+    }
+  } catch (e) {
+    btn.disabled = false;
+    btn.style.opacity = "1";
+    progress.textContent = `❌ 目録の取得に失敗：${e.message}`;
+    alert(`目録の取得に失敗しました。PATの権限（repo）を確認してください。\n\nエラー: ${e.message}`);
+    return;
+  }
+
+  // ステップ2：写真ファイルを順番にアップロード（マニフェストは触らない）
   let success = 0;
   let failed = 0;
+  const succeeded = []; // {dateStr, photoId} の配列
 
   for (let i = 0; i < allLocal.length; i++) {
     const { photo, dateStr } = allLocal[i];
     progress.textContent = `📤 ${i + 1} / ${allLocal.length} 枚目をアップロード中...`;
     try {
-      await uploadPhotoToCloud(photo, dateStr);
-      await deleteUserPhoto(dateStr, photo.id);
+      const base64 = photo.url.split(',')[1];
+      const timestamp = Date.now() + i; // ユニーク化（同ミリ秒の衝突回避）
+      const filename = `${timestamp}.jpg`;
+      const path = `photos/${dateStr}/${filename}`;
+
+      await ghPutFile(path, base64, `Add photo: ${dateStr} ${photo.category}`, pat);
+
+      // ローカルmanifestのコピーに追加（GitHubには後でまとめて反映）
+      if (!manifest[dateStr]) manifest[dateStr] = [];
+      manifest[dateStr].push({
+        url: path,
+        category: photo.category,
+        caption: photo.caption || "",
+        timestamp: timestamp
+      });
+
+      succeeded.push({ dateStr, photoId: photo.id });
       success++;
     } catch (e) {
-      console.error("アップロード失敗:", e);
+      console.error(`写真アップロード失敗 (${i + 1}/${allLocal.length}):`, e);
       failed++;
+      // 連続して失敗が続く場合は早めに諦める（PAT間違いなどの可能性）
+      if (failed >= 5 && success === 0) {
+        progress.textContent = `❌ 連続失敗。中断します。PATを確認してください。`;
+        btn.disabled = false;
+        btn.style.opacity = "1";
+        alert(`連続でアップロードに失敗しました。\nPATの権限（repo フル）が正しいか、⚙️設定で確認してください。`);
+        return;
+      }
+    }
+  }
+
+  // ステップ3：マニフェストを1回だけ更新（リトライあり）
+  if (success > 0) {
+    progress.textContent = `📋 目録を更新中...`;
+    let manifestUpdated = false;
+    let lastError = null;
+    for (let attempt = 0; attempt < 4; attempt++) {
+      try {
+        // 2回目以降は最新のshaを取り直して衝突を避ける
+        if (attempt > 0) {
+          const fresh = await ghGetFile(CLOUD_MANIFEST_PATH, pat);
+          if (fresh) {
+            manifestSha = fresh.sha;
+            // 他デバイスからの更新があるかもしれないのでマージ
+            const freshManifest = JSON.parse(base64ToUtf8(fresh.content));
+            for (const dateStr in freshManifest) {
+              if (!manifest[dateStr]) {
+                manifest[dateStr] = freshManifest[dateStr];
+              } else {
+                // 自分が今追加したエントリと既存エントリをまとめる（重複しないようtimestampで判定）
+                const existingTs = new Set(manifest[dateStr].map(p => p.timestamp));
+                for (const p of freshManifest[dateStr]) {
+                  if (!existingTs.has(p.timestamp)) manifest[dateStr].push(p);
+                }
+              }
+            }
+          }
+        }
+        const newContent = utf8ToBase64(JSON.stringify(manifest, null, 2));
+        await ghPutFile(CLOUD_MANIFEST_PATH, newContent, `Bulk sync ${success} photos`, pat, manifestSha);
+        manifestUpdated = true;
+        cloudPhotosByDate = manifest;
+        break;
+      } catch (e) {
+        lastError = e;
+        console.warn(`目録更新試行 ${attempt + 1} 失敗:`, e.message);
+        if (attempt < 3) await new Promise(r => setTimeout(r, 1000 + attempt * 1000));
+      }
+    }
+
+    if (manifestUpdated) {
+      // 成功した写真のローカルコピーを削除
+      for (const { dateStr, photoId } of succeeded) {
+        try { await deleteUserPhoto(dateStr, photoId); } catch (e) { /* 無視 */ }
+      }
+    } else {
+      btn.disabled = false;
+      btn.style.opacity = "1";
+      progress.textContent = `⚠️ 写真は上がりましたが目録更新に失敗`;
+      alert(`写真ファイルは ${success}枚アップロードできましたが、目録の最終更新に失敗しました。\n\nエラー: ${lastError ? lastError.message : "unknown"}\n\nもう一度ボタンを押して再試行してください（重複登録は自動でマージされます）。`);
+      return;
     }
   }
 
