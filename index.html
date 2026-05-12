@@ -1088,7 +1088,7 @@
     <button class="period-btn active" data-period="day">📅 日</button>
     <button class="period-btn" data-period="week">📆 週</button>
     <button class="period-btn" data-period="month">🗓️ 月</button>
-    <button class="period-btn" data-period="half">📈 半年</button>
+    <button class="period-btn" data-period="term">📈 学期</button>
     <button class="period-btn" data-period="year">📊 年間</button>
   </div>
 
@@ -1262,6 +1262,17 @@
           <button id="savePat" style="flex:1; padding:8px; background:#27ae60; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.85em;">保存</button>
           <button id="clearPat" style="padding:8px 14px; background:#ecf0f1; color:#5a6c7d; border:none; border-radius:6px; cursor:pointer; font-size:0.85em;">削除</button>
         </div>
+      </div>
+
+      <!-- 📥 Claude分析の取り込み（説明書） -->
+      <div style="background:#fff7f0; border-radius:8px; padding:14px; margin-bottom:14px; border-left:3px solid #f39c12;">
+        <strong style="color:#2c3e50;">📥 Claudeの分析の使い方</strong>
+        <ol style="margin:8px 0 0 18px; padding:0; font-size:0.85em; line-height:1.7; color:#34495e;">
+          <li>ボイスメモの文字起こしをClaudeとのチャットに貼り付ける</li>
+          <li>ClaudeがJSON形式で分析を返す</li>
+          <li>カレンダーの該当の日（または週/月/学期/年）を開いて、<strong>「📥 Claudeの分析を貼り付け」</strong> の欄に貼り付ける</li>
+          <li>「取り込む」を押すと、ダッシュボードに反映される</li>
+        </ol>
       </div>
 
       <!-- PAT発行ガイド -->
@@ -2615,6 +2626,195 @@ const ANALYSIS_DATA = [
     hypothesis: "**仮説**：けテぶれは*悔しさ*や*面倒くささ*といったネガティブ感情を*学習エネルギー*に変換する装置である。これにより**やりたさが消えた瞬間にも自己調整が機能する**。教師の最大の役割は、感情を学びに転換する*ルートを設計*すること。",
     positive_count: 15,
     photos: []
+  },
+  {
+    date: "2026-05-07",
+    subject: "国語（図書館）・算数（X/Y初出）・学活",
+    class: "6年4組",
+    good: "GW明けの動機の谷を「来ただけで100点」の反復で埋めた。お金ゲーム（じゃんけん×100円×ありがとうの三点セット）で男女・無口な子まで自然に関わる関係を再構築。給食での「声かけ封印」（行くぞ／早く食べての禁止）で1年生迎え〜配膳〜片付けまで子どものタイミングで完遂。校長の「挨拶の風」を自分の指導核「聞く＝相手も自分も大切にする」と教室戻り3分で同型化して渡した。算数X/Y初出を「丸→X」のパッケージ化＋10回練習で接続を保ちつつ導入、中高への未来接続も語った。",
+    good_detail: `**1. 称賛ファースト（1日通した戦略）**
+> 来ただけで気がついたら今日終わってるし、そんな風邪ひいて頑張らずに楽に過ごそうね
+
+→ GW明けの動機の谷を埋める設計。背筋・反応など些細な変化を即時に言語化。教師自身も「GW中ダラダラ過ごしました」と*自己開示*して子どもの肩の力を抜いた。
+
+**2. お金ゲームでの関係づくり**
+> こんな盛り上がるのが6年で（…）めちゃくちゃ盛り上がる、ただのじゃんけん
+
+→ グループ4-5人に1万円→100円札100枚を均等配分→じゃんけんで100円ずつ動かす×「ありがとうございました」の発話×*社長役（借金OK・寄付OK・交代制）*の3層構造。男女・無口な子同士まで自然に関わった。**5月の節目に意図して関係づくりを前置**した判断。
+
+**3. 給食の「声かけ封印」実験**
+> 「行くぞ」とか「早く食べて」とかそんなこと絶対言わないようにしようと思って
+
+→ 出発は遅れたが**1年生迎え〜配膳〜片付けまで全部子どものタイミングで遂行**。「これはすごい」と教師自身が驚き。委員会・暴走（給食室往復）・教室残留の役割分担まで*子どもが決定*。
+
+**4. 全校朝会と教室掲示の即時接続**
+> 挨拶は相手のことを大切にする ↔ 聞くは相手も自分も大切にする
+
+→ 校長＋前田・木藤先生の「挨拶の風プロジェクト」（5/12〜1ヶ月、名人ポイント*あ・い・さ・つ*）を、教室戻り直後に「先生それ、聞くで言ったことと**ほぼ同じ**こと言ってるなと思った」と即時メタ化。何人かが*教室掲示*を見て気づく反応あり。
+
+**5. 算数X/Y初出の段差設計**
+> 丸とか三角とか四角とか使ってたかもしれないけど、今後この丸とか三角がXとYに変わります
+
+→ 既習の図形ラベルから*文字式*への乗り換えを「形が変わっただけ、意味は一緒」と接続を保ちながら導入。Xを*10回ノート練習*＋Yの書き方注意（ニョッとなる部分）まで*文字記号の身体化*。中学・高校の未来接続も明示「英語のXは違うけど算数のXはずっと使う」。
+
+**6. ケテぶれ「本気のテスト」の言語化**
+> あのわざと自分で決めて友達に教えてもらおうって言ってやるのは全然いいけど、それで本当に自分の力になるかどうか
+
+→ 教えてもらう＝悪ではなく*戦略の一つ*と明示しつつ、家で「**間違えたら隠してもう1回**」が本気のテストと言語化。家庭学習接続の解像度が一段上がった。
+
+**7. 国語：図書館単元での*未来接続***
+- 県立・市立・大学（宮崎大学）図書館を*体験ベース*で紹介、都城市図書館の写真で「ホテルみたい」と興味喚起
+- 「もしね、ちょっと大きくなって興味があったら行ってみてほしい」と*教科書を超える出口*を示した
+
+**8. 連絡帳・宿題運用の徹底**
+忘れた子全員の*名前呼び*＋「明日絶対に提出」を本人に確認。当たり前の積み重ねを集団で確認する*静かな徹底*。`,
+    improve: "GW明けの教室のどんよりした空気を、より早く解放する仕掛けに余地。算数を完全一斉にした判断は妥当だが、X/Y初出を一斉にしたことで得意な子に物足りなさが残った可能性。お金ゲームの再演希望には第2弾ルール（社長交代・ボーナス・他グループ貸付）の仕込み未着手。声かけ封印は出発の遅れというコストを伴う＝記録すべき。漢字ドリル17・18ページの見通しが粗く、子どもによってばらつきが残った。",
+    improve_detail: `**1. 朝の空気の解放までのテンポ**
+全校朝会が長引き1時間目に食い込んだのは外的要因だが、**教室戻り直後の雰囲気切り替え**は3〜5分で打てる手があったか（短時間ゲーム・体ほぐしなど）。実際は*そのまま3分休憩→国語へ*の流れで、空気を解放する間（ま）が薄かった。
+
+**2. 算数を完全一斉にした判断**
+> 今日はあの雰囲気的に（…）こっちが完全に主導して話せようということで
+
+→ GW明け＋直前のお金ゲームの興奮を踏まえて妥当。ただし**X/Y初出を一斉にした**ことで、得意な子の物足りなさが残った可能性。例題は一斉、練習はけテぶれ、というハイブリッドは再現性が高い設計として残す。「丸→X」のパッケージ化＋10回練習で接続は保てたが、*難易度の手応え*は子ども側で薄かった可能性。
+
+**3. お金ゲームの再演希望への応答**
+> もう1回したいって言ってたので
+
+→ 「ただのじゃんけん」では飽きが来る。**第2弾ルール**（ボーナスじゃんけん／社長交代条件／他グループへの貸付など）を仕込んでおきたい。今日は*仕込み未着手*。
+
+**4. 声かけ封印のコストの可視化**
+出発の遅れは*記録に残すべきデータ*。次回以降「封印×出発遅延=◯分」を子どもと共有して、*余白の使い方*を学級全体で評価できる材料にする。
+
+**5. ドリル17・18ページの見通し**
+> 17・18終わり終わりそうですか
+
+→ 進度確認の*粗さ*。3周方針は良いが、初回での*躓き対象*をピックアップする仕掛けが薄い。今日は「3周するまでに覚えればいい」の言葉で*完璧主義から距離*を取れたのは価値ある。`,
+    growth: "教師：「自由と自律」フレームの言語化が整った。席替え・給食当番・お金ゲーム・けテぶれの4場面を貫く論理として明示できた段階。図書カード→学級グッズの循環を「壊したら自分たちを壊すようなもの」と価値の連鎖として渡せた。\n子ども：給食当番5月新メンバーの初日に全行程を自走。けテぶれの間違い直しを教師の指示なしでドリル接続まで進めた子が複数。お金ゲームで「ありがとう」が自然に発話。",
+    growth_detail: `**子どもの成長**
+- 給食当番、5月の新メンバーの**初日**にもかかわらず、全行程を自走
+- お金ゲームで男女問わずじゃんけん→「ありがとうございました」の発話が**自然に**出た
+- けテぶれの間違い直しを*教師の指示なし*でドリル接続まで進めた子が複数
+- *予習している子*が複数現れ「小6で予習ってなかなかしないけどすごい」と教師が驚き
+- 校長の自己採点で*70点・80点・90点*に手を挙げる子の存在＝自己評価の解像度が育っている
+
+**教師の成長**
+> みんなに自由をどんどん渡せなくなるので、先生が全部決めないといけないのは嫌ですよね
+
+→ 「自由を渡す → 使いこなせなければ制限せざるを得ない」という**条件付き自由**の論理を、子どもに直接語る形で言語化。これは席替え・給食当番・お金ゲーム・けテぶれの**四場面に通底**する設計言語。
+
+**価値の循環の言語化**
+> これ壊したことは自分たちのことを壊すようなもんだから
+
+→ 教師の論文受賞→図書カード→学級グッズ購入の循環を子どもに開示。*感謝と所有の意味づけ*を学級経済の構造として示せた。`,
+    independence: "主体性：給食当番の自決／席替え完全くじ／お金ゲームの社長交代＝自由を渡す3場面が同日に出現。給食の声かけ封印で自主性の余白。\n自己調整：けテぶれ「本気のテスト＝家で隠してもう1回」を家庭学習と接続するアドバイス。Xを10回練習で文字記号を身体化。\n協働：お金ゲームの社長←→社員のお金のやり取り＝感謝の連鎖の場を意図設計。\n長期価値：X/Yを「中学・高校もずっと使う」、図書館を「大学でも使える」と未来接続。「自由と自律」を学級文化として条件付きで渡す論理を共有。",
+    independence_detail: `**主体性**
+- 給食当番を*自分たちで決定*（揉めたら最後じゃんけん）
+- 席替え*完全くじ引き*＋トラブル時の制限ルールを明示
+- 給食の**声かけ封印**で自主性が立ち上がる余白を作った
+
+**自己調整**
+- けテぶれの*計画→テスト→分析→練習*を再確認
+- アドバイス：「**間違えたら隠してもう1回 = 本気のテスト**」「家でもう1回やれば学校と家がつながる」
+- ドリル**3周方針**を再アナウンス、今日は2ページ進める判断
+
+**協働**
+- お金ゲームで*無意識に関わる場*を意図的に設計
+- 「ありがとうございました」を負けたじゃんけんの後に必ず言う設計＝**感謝の発話を関係の起点に**
+
+**長期価値**
+- 「挨拶」と「聞く」を**相手も自分も大切にする**で同型化
+- 「自由と自律」を学級文化として**条件付きで渡す**論理を共有`,
+    next: "5/12からの挨拶キャンペーン期間中、毎朝3分で「聞く」掲示と接続して1ポイントずつ語る／声かけ封印を朝の準備・清掃でも展開し出発遅延コストを可視化／お金ゲーム第2弾ルールの仕込み／けテぶれの家庭学習接続を全員言えるまで反復／ドリル3周進捗の可視化（17・18ページ完了）／校長「いいね南っ子」自己採点を学級独自の振り返り素材に変換／図書館単元から*出口*の継続提示",
+    next_detail: `**1. 挨拶キャンペーン期間（5/12〜1ヶ月）の運用**
+- 毎朝3分、教室の「聞く」掲示と接続して**1ポイントずつ**話す（一気に語らない）
+- 名人ポイント「あ・い・さ・つ」（明るく／いつも／先に／続ける）を分けて扱う
+
+**2. 声かけ封印の他場面展開**
+- 朝の準備、清掃、移動の場面で**1場面ずつ**封印を試す
+- 自走が立ち上がったら言語化して褒める／立ち上がらなければ理由を観察
+
+**3. けテぶれの家庭学習接続を習慣化**
+- 「間違えた問題は宿題でもう1回」を**全員が言える**まで反復
+- ドリル3周の進捗を可視化（17・18ページまで完了）
+
+**4. お金ゲーム第2弾**
+- 「社長交代」「ボーナスじゃんけん」「他グループへの貸付」など**自由度を一段上げる**ルール`,
+    motivation: "🟡→🟢 朝はどんより、お金ゲーム以降は持ち直し。1日通しての称賛が下支え。",
+    motivation_detail: `**やりたさが弱かった瞬間：朝**
+> 教室の雰囲気が全体的にこうちょっとやっぱどんよりしてる感じがありました
+
+→ GW明け初日の予想通りの谷。ただし*全員出席*（旅行欠席1名除く）の事実自体が動機の最低ラインを示す。
+
+**やりたさが質的に変化した瞬間：お金ゲーム**
+> もうちょっと仕掛けるのかなとめちゃくちゃ盛り上がる、ただのじゃんけん
+
+→ 「学習」よりも「**関係づくり**」を前置することで、後の学習への接続が滑らかになった。これは*動機の質的転換*。
+
+**動機の波の特徴**
+- 谷（朝）→山（お金ゲーム）→平地（算数一斉）→山（給食当番自走）の波形
+- 教師の*褒める仕組み*が谷でも下支えとして機能`,
+    self_regulation: "💡 4タイプ全部観察。特に「やりたくないが取り組む」（GW明け倦怠を称賛で乗り越え）と「協働」が顕著。",
+    self_regulation_detail: `**観察された自己調整の4タイプ**
+
+⚡ **やりたくないが取り組む**（最も顕著）
+- GW明けのどんより気分から*褒められて切り替えた*子複数
+- けテぶれの間違い直しを*指示なし*でドリル接続
+
+🎯 **目標・方法の調整**
+- 算数の例題で*X/Y表記*を10回練習に取り組む
+- けテぶれの計画を**自分で書く**段階を全員突破
+
+🤔 **試行錯誤**
+- 文字と式の練習問題で*複数のやり方*を試す姿
+- お金ゲームで*ルールの抜け道*を探そうとする姿（社長への貸付など）
+
+❤️ **感情を乗り越える**
+- GW明けの*気持ちが乗らない*状態を、笑顔と称賛で乗り越え
+- 給食当番の*勝手の違い*を一生懸命やる姿勢で吸収`,
+    transition: "💡 移行の核：教師の「来ただけで100点」称賛 + お金ゲームでのつながり再構築。",
+    transition_detail: `**移行を支えた要因**
+
+🛠️ **環境設計**
+- お金ゲームが**男女問わず関わる場**を提供
+- けテぶれの*計画→テスト→分析→練習*ルートが今日も機能
+- 席替えくじ＋制限ルール＝**自由を試せる安全圏**
+
+✨ **称賛の連打**
+- 「来ただけで100点」を*複数回*繰り返す
+- 背筋・反応など*些細な変化*を拾う
+- 給食当番の自走を*「これはすごい」*と即時評価
+
+❓ **概念接続**
+- 「挨拶＝相手のことを大切にする」を「聞く＝相手も自分も大切にする」に**接続**
+- *普段の指導の文脈*に学校行事を統合
+
+⏸️ **手放し**
+- 給食当番・席替えを*子どもに任せる*
+- 給食の*声かけ封印*で余白を作る`,
+    teacher_intervention: "🛠️ 環境設計（お金ゲーム・けテぶれ・席替えくじ）と✨評価・承認（1日通した称賛）が中心。⏸️待つ・任せる（声かけ封印）が今日の特徴。",
+    teacher_intervention_detail: `**観察された教師の関わり4類型**
+
+✨ **評価・承認**（最も顕著）
+- 「来ただけで100点」を*1日に複数回*反復
+- 背筋・反応・自走の*些細な変化*を即時に言語化
+- 給食当番自走を「これはすごい」と*破格の承認*
+
+🛠️ **環境設計**
+- お金ゲーム＝**関係づくりの仕掛け**
+- けテぶれ＝*計画→テスト→分析→練習*の構造
+- 席替え完全くじ＋制限ルール＝**自由の枠組み**
+
+⏸️ **待つ・任せる**（今日の特徴）
+- 給食当番決め・席替えを*子どもに完全に手渡し*
+- 給食の**声かけ封印**で自主性の余白を確保
+- けテぶれの自走時間中は*星を書きながら見守り*
+
+❓ **問いかけ**
+- 挨拶の話を「**先生何回か言ってるよね？**」と概念接続
+- 「**何する？**」と問いかける（指示しない）`,
+    hypothesis: "**仮説**：GW明けのような動機の谷では、「学習」よりも「**関係づくり**」と「**称賛の連打**」を意図的に前置することで、後の学習への接続が滑らかになる。**声かけ封印**は、自主性が立ち上がる*余白の設計*として機能する（コストとしての出発遅延と引き換え）。**自由と自律のフレーム**は給食当番／席替え／お金ゲーム／けテぶれの4場面に通底するだけでなく、X/Y初出の「形は同じ・意味は文脈で違う」のような*知識接続*にも通底する設計言語である。教師の最大の役割は、**自由と自律のバランスを条件付きで渡しつつ、評価・承認を絶やさない**こと。",
+    positive_count: 22,
+    photos: []
   }
   // ★ 新しいデータはここに追加してください
 ];
@@ -2863,6 +3063,166 @@ function getGitHubPAT() {
 function setGitHubPAT(pat) {
   if (pat) localStorage.setItem(GITHUB_PAT_KEY, pat);
   else localStorage.removeItem(GITHUB_PAT_KEY);
+}
+
+/* ============================================================
+   🤖 Claude分析の取り込み（チャットで生成したJSONを貼り付け）
+   ============================================================ */
+const AI_ANALYSIS_KEY = "classroom_dashboard_ai_analyses_v1";
+const AI_RANGE_ANALYSIS_KEY = "classroom_dashboard_ai_range_analyses_v1";
+
+const SUBJECT_LIST = [
+  "国語",
+  "算数(4組)",
+  "算数(2組)",
+  "道徳",
+  "体育",
+  "図工",
+  "総合",
+  "学活"
+];
+
+/* ============================================================
+   📥 HTMLに埋め込まれた事前生成済みのClaude分析
+   ロード時にlocalStorageへseedされ、その後は通常の取り込み/削除で
+   上書き・削除可能（ただしページ再読込で復活する仕様）
+   ============================================================ */
+const PRESEEDED_AI_ANALYSES = JSON.parse(`{
+  "2026-05-07": {
+    "transcript": "",
+    "reflection": "",
+    "subjects": [
+      {
+        "subject": "学活",
+        "positive_count": 22,
+        "good": "校長講話「挨拶＝相手を大切にする」を自分の語彙「聞く＝相手を大切にする」と即座に結合し、外部メッセージを学級文化に翻訳。お金ゲームで6年生でも予想以上の盛り上がりを引き出し、給食当番・席替えを子どもに委ねる枠組みを提示した。",
+        "good_detail": "**1. 朝の存在承認の徹底**\\n「来ただけで100点」を朝から繰り返し、連休明けの**「来た」という事実そのもの**を承認した。「もう汚だけで今日100点です」というフレーズを子どもへの最初の言葉に置いた判断は秀逸。\\n\\n**2. 外部メッセージの学級翻訳**\\n校長講話直後に「先生が言ってるのとほぼ同じこと言ってませんか」と問いかけ、掲示物を見て気づく子が出現。**「聞く＝相手を大切にする」**という普段の指導語彙と**「挨拶＝相手を大切にする」**を即座にリンクさせた。\\n\\n**3. お金ゲームの設計**\\n1万円を社長が管理／社員がじゃんけんで100円やり取り／「ありがとう」を強制せず自然発生／社長交代制。**6年で予想以上に盛り上がった**（教師自身も驚き）。男女関係なくじゃんけんが発生する関わりの場を設計した。\\n\\n**4. 自由を渡す枠組みの提示**\\n給食当番も席替えも完全くじ引きで委ねた上で、**「自由を使いこなせなかったら制限されていく」**という長期視点を冒頭で言語化。",
+        "growth": "教師は外部の言葉を学級文化に翻訳する技と、給食当番の声かけ「行くぞ」「早く食べて」を意図的に封じる自己制御を発揮。子どもは1年生・6年生が自分たちのタイミングで給食当番を動かす自走の姿を見せた。",
+        "growth_detail": "**教師の成長**\\n- 校長講話を「聞いて流す」のではなく**自分の学級語彙に翻訳**する翻訳力\\n- 連休明けの感情マネジメントを**「来たことだけを褒める」**にフォーカスする戦略性\\n- 「行くぞ」「早く食べて」を**意図的に封じる**自己制御（振り返りで明言）\\n\\n**子どもの成長**\\n- お金ゲーム：男女・関係性を超えてじゃんけんが発生\\n- 給食当番（1年・6年）が**自分たちのタイミングで**出発・片付け\\n- 朝の話で**掲示物を指して気づく子**の出現（「先生が言ってるのと同じ」）",
+        "next": "「挨拶の風プロジェクト」を朝の話だけで終わらせず1ヶ月続ける学級内設計／お金ゲーム第2弾の設計／自由とトラブルの境目を学級通信で言語化して保護者と共有。",
+        "next_detail": "**1. 挨拶の風プロジェクトの学級内設計**\\n来週5/12からの1ヶ月。シール作戦をクラスに合わせて拡張。**自分から・目を見て**の2軸で振り返りを毎週1回入れる。\\n\\n**2. お金ゲーム第2弾**\\n「もう1回したい」の声があったので、**ルールを進化**させた第2弾。例：複数グループ間取引、社長交代制、借金マイナス記録など。\\n\\n**3. 自由とトラブルの言語化**\\n今日の席替えで話した「自由を使いこなせなかったら制限される」を**学級通信か掲示**で言語化。保護者にも共有。\\n\\n**4. 給食当番の自走を価値づけ**\\n1年・6年が自分たちのタイミングで動けた事実を、**学級全体に共有**して再生産する。",
+        "motivation": "🟢 朝はどんよりスタートだったが、お金ゲームで一気に上向き。給食当番・席替えで子どもが自分たちで決める手応え。挨拶の話への気づきも生まれた。",
+        "motivation_detail": "**やりたさが弱かった瞬間**\\n- 教室に入ってきた段階の「どんより」（教師自身も予期）\\n- 校長講話の前半（一方向の語り）でやや集中が落ちる\\n\\n**やりたさが高まった瞬間**\\n- 朝の話で**「挨拶＝聞くと同じ」**に気づいた瞬間（掲示物を指差した子）\\n- お金ゲーム：6年でこんなに盛り上がるとは（教師の振り返り「めっちゃ盛り上がった」）\\n- 給食当番が自分たちで動いた瞬間\\n\\n**動機の波の特徴**\\n**「外から来たエネルギーを内側に翻訳する」**ことで動機が立ち上がる。校長講話→学級文化、お金ゲーム→関係温度、と**翻訳の連鎖**が成立した日。",
+        "hypothesis": "連休明け初日は**「教えること」より「来たことを承認する」**ことが翌日以降の動機を支える。校長講話のような外部メッセージは**自分の学級語彙と結合**することで威力が増す。**自由を渡す→トラブルが起きたら制限の話に戻す**という枠組みは、子どもが自由を持続させる長期戦略として有効。"
+      },
+      {
+        "subject": "国語",
+        "positive_count": 8,
+        "good": "連休明けの認知負荷が低い日に**「短く終わらせて関わりを増やす」判断**が秀逸。公共図書館の単元をテンポよく着地させ、残った時間を関係構築に再投資。漢字ドリル「3周する」宣言で学習の見通しを共有。",
+        "good_detail": "**1. スケール表現の身体化**\\n図書館の蔵書数を「教室の2.7倍」「3組・2組のほとんどが埋まる」と表現し、抽象的な数字を**身体感覚**に落とした。\\n\\n**2. 教科書外の世界を見せる**\\n都城図書館「ホテルみたいな見た目」の写真／宮大図書館「研究レベルで使える」の長期視点を提示し、**好奇心の地平**を広げた。\\n\\n**3. 漢字ドリル3周宣言**\\n「1周完璧主義」ではなく**「3周試行錯誤主義」**へ。学習観そのものを更新する宣言。\\n\\n**4. パッと終わらせる判断**\\n40分かけて深掘りせず、雑談と教科書確認で**子どもの今日のエネルギーに合わせた配分**。",
+        "growth": "教師は連休明けの空気を読んで「今日はここまでで十分」と切り上げる柔軟性を発揮。子どもは漢字ドリルで予習する子が出現し、教師から公開称賛を受けた。",
+        "growth_detail": "**教師の成長**\\n- 教材を「終わらせる」より**「子どもの状態に合わせて配分する」**判断を即実行\\n- 「3周する」と**数値で見通しを示す**ことで子どもの学習計画感覚を育成\\n\\n**子どもの成長**\\n- 予習する子の出現（教師「小6で予習ってなかなかしないけどすごい」と公開称賛）\\n- 「習ったところやって」の指示に対し、自分でペースを調整する姿",
+        "next": "漢字3周の進捗を可視化する仕組み／公共図書館単元の「実際に行ってみよう」を宿題か総合と連携／予習する子の方法を学級通信で紹介し、他の子へ波及。",
+        "next_detail": "**1. 漢字3周の進捗の可視化**\\nドリル1周目・2周目・3周目をどう記録するか。チェック欄を作るか、子ども自身に管理させるか。\\n\\n**2. 図書館単元の身体化**\\n教科書を読んで終わりではなく、**「実際に県立図書館に行く週末ミッション」**を提案。総合や宿題と連携。\\n\\n**3. 予習する子の方法を共有**\\n「予習って何してる？」を学級通信か朝の時間でインタビュー。**個別の優れた習慣を学級に開く**。\\n\\n**4. 教科書41ページ単元の延長**\\n来週の国語テストに16までが入る告知あり。**漢字練習と本文読解の二軸**を意識化。",
+        "motivation": "🟡 連休明けの低めスタート。図書館の話は雑談的な反応で温まり、漢字練習は淡々と進行。予習してる子の称賛で少し上向き。",
+        "motivation_detail": "**やりたさが弱かった瞬間**\\n- 教室全体の「どんよりした雰囲気」（教師自身の振り返りでも明言）\\n- 図書館の話で写真への反応が薄かった場面あり\\n\\n**やりたさが上向いた瞬間**\\n- 「都城図書館・ホテルみたいな見た目」の写真への反応\\n- 漢字「予習してる人」の発見と称賛で、その子の周りに小さな称賛の波\\n\\n**動機の波の特徴**\\n連休明け特有の**「内側の温度が低い日」**。教師が無理に上げず、「来ただけで100点」と肯定。**負荷を上げない判断**が逆に動機の地盤を守った。",
+        "hypothesis": "連休明け初日は**「内容を進める」より「関係を温め直す」**ことが翌日以降のパフォーマンスに効く。教科書を「終わらせる」のではなく**「今日のエネルギーに合わせて配分」**する判断が、長期的な学習意欲の維持に直結する。"
+      },
+      {
+        "subject": "算数(4組)",
+        "positive_count": 18,
+        "good": "「丸と三角がXとYに変わっただけ」と**抽象化の階段を1段ずつ可視化**。新概念導入を徹底的に**既習との地続き感**で説明した。第一次を一斉で揃え、その後けテぶれで自走に移す二段構え。",
+        "good_detail": "**1. 既習との地続き感**\\n「丸と三角」(既習) → 「XとY」(新)を**地続き**として導入。「丸と三角がXとYに変わっただけ」を繰り返し言語化。\\n\\n**2. 文字の身体化**\\nX・Yの書き方を10回練習させ、**身体化**を重視。Yの右下のはね方を細かく指導し「これがないと別の字になる」と意味を持たせた。\\n\\n**3. 学習構造の見通し**\\n例題→まとめ→練習問題（三角4番）→けテぶれという**4段階の構造**を冒頭で提示。\\n\\n**4. けテぶれ計画の全員チェック**\\n全員の計画ノートをチェックして星をつけ、**プロセスを承認**。本気のテストの条件を「家でも再現できる形」として言語化（「間違えたら宿題でもう1回」）。",
+        "growth": "教師は「一斉で安心を作り、自走で深める」の二段構えを連休明けに最適化。子どもは編集問題が終わったあとドリル元にも進む子・間違いを隠してもう1回解く子が出現し、自分でやり直しの判断ができている。",
+        "growth_detail": "**教師の成長**\\n- 「これ何になる？」を**「何しますか？」**に置き換えて主語を子どもへ戻す問い直し\\n- 「間違えたら家でテストとしてもう1回」と**学校と家の学びを繋ぐ枠組み**を提示\\n- 連休明けに**第一次=一斉／後半=自走**の二段構えを選択する状況判断\\n\\n**子どもの成長**\\n- 編集を終えてドリル元に進む子・間違ったところを隠してもう1回解く子の出現\\n- 「予習してる」「次のページもう見てる」と**先を読む力**の芽生え\\n- けテぶれの計画を自分で書ける段階に到達",
+        "next": "けテぶれの「分析」の質を上げる手立て／本気のテストの家庭版テンプレ化／2組(自由進度)との進度差を意識化。",
+        "next_detail": "**1. 分析の質を上げる**\\n今は「やり直し」が中心。**「①計算ミス／②式の誤り／③問題文の読み落とし」**などのタグ化で、分析を構造化。漢字の分析パターンを算数に移植。\\n\\n**2. 本気のテストの家庭版**\\n「間違えた問題を隠してもう1回」を、**宿題テンプレに組み込む**。家のけテぶれと学校のけテぶれの接続。\\n\\n**3. 進度差の活用**\\n2組(自由進度)が4組より2時間早い。**2組を未来予知として使う**／4組のペースが遅すぎないかの自己点検。\\n\\n**4. XとYの定着確認**\\n次回冒頭で**Yの右下のはね方**を子どもに再現させる小テスト的な瞬間を作る。",
+        "motivation": "🟢 文字導入で「Xって書く！」の身体化反応。けテぶれ自走時間の集中度が高く、教師は「一生懸命の姿が大好き」と感じた。",
+        "motivation_detail": "**やりたさが高まった瞬間**\\n- 「Xを10回書きます」での身体化練習で**全員が同じ動きをする一体感**\\n- けテぶれ自走時間の集中度（教師「本当に一生懸命の姿が大好き」と振り返りで明言）\\n- 編集問題を終えてドリル元に自発的に進む子の出現\\n\\n**やりたさが弱まった瞬間**\\n- 例題の繰り返し説明（「丸と三角が…」）で、すでに理解した子はやや退屈そう\\n- 計算ミスを焦って答える子に「丁寧に」の声かけが必要な場面\\n\\n**動機の波の特徴**\\n連休明けでも**「内容の易しさ＋自己決定の余白」**で動機が回復。第一次=一斉で安心を作り、後半=自走で自由度を確保する二段構えが効いた。",
+        "hypothesis": "新概念の導入は**「既習との地続き感」**と**「身体化（10回書く）」**で心理的負荷を下げられる。さらに**第一次=一斉／後半=自走**の二段構えは、**安心と自己調整の同居**を実現するパターン。けテぶれの「分析」を構造化できれば、自走の質はさらに上がる。"
+      },
+      {
+        "subject": "算数(2組)",
+        "positive_count": 6,
+        "good": "自クラスより**2時間進度が早い他クラス**で、教師の役割を「教える人」から**「リズムを保つ人」**にシフト。文字と式を素早く処理し、震源地ゲームで関係の温度を上げた。",
+        "good_detail": "**1. 役割のシフト**\\n進度が早いクラスでは内容説明より**自由進度プリント→丸付け→今日の内容**の3段階のリズムで淡々と進行。\\n\\n**2. ゴールデンウィーク明けの温度差を読む**\\n他クラスでも**「ゴールデンウィーク明け」という文脈**を意識し、震源地ゲームを導入。\\n\\n**3. 震源地ゲームの設計**\\n鬼が震源地（リーダー）を当てるゲーム。**全員が無意識に同じ動きをする**ことで、関係性の温度が上がる。",
+        "growth": "教師は他クラスでの自分の役割を意識的に変える柔軟性。子どもは進度の速さが示す通り、教師の関わりが薄くても自走できる集団に育っている（観察）。",
+        "growth_detail": "**教師の成長**\\n- 自クラスと他クラスで**指導の解像度を切り替え**られる\\n- ゲーム導入の判断を「ゴールデンウィーク明け」という文脈で即決\\n\\n**子どもの成長（観察）**\\n- 進度の速さ＝**自走力の蓄積**を示唆。教師がいなくても進める集団の手応え\\n- 震源地ゲームを「楽しくやってくれた」（教師の振り返り）",
+        "next": "2組での観察を自クラスにフィードバック／震源地ゲームの効果を比較メモ／2組の自走力の源泉を担任から学ぶ機会。",
+        "next_detail": "**1. 他クラスの観察を自クラスに還流**\\n2組の**自走力の源泉**を担任に聞く・観察記録を残す。\\n\\n**2. 震源地ゲームの効果検証**\\n2組と4組両方で関わりのゲームを使った今日、**どちらでより関係温度が上がったか**比較メモ。\\n\\n**3. 進度差の活用**\\n2組が先に進む = 自クラスの**未来予知**として使える。次に何でつまずくかの仮説を立てる材料に。",
+        "motivation": "🟡 算数の内容は淡々と消化、震源地ゲームで関係の温度が上がった瞬間あり。授業内容そのものへの没入は中程度。",
+        "motivation_detail": "**やりたさが上がった瞬間**\\n- 震源地ゲームの「鬼が誰か気づかない」緊張と笑いの混在\\n- 教師「楽しくやってくれた」（振り返りでも明言）\\n\\n**動機の波の特徴**\\n他クラスでの教師は**「内容の管理」より「場の温度の調整」**に役割が寄る。これは2組という集団の**成熟度を反映**している可能性。",
+        "hypothesis": "進度が早いクラスでは、教師の役割は**「教える」から「場の温度を保つ」**にシフトする。震源地ゲームのような**「関係性に効くゲーム」**は、内容の進行より**集団のコンディション維持**として機能する。これは自クラスの未来像でもある。"
+      }
+    ],
+    "day_summary": "**連休明け初日のクラス再起動。**\\n\\n教師は朝から**「来ただけで100点」**を繰り返し、内容より関係の温度を優先する判断を徹底。校長講話「挨拶＝相手を大切にする」を自分の指導語彙**「聞く＝相手を大切にする」**と即座に結合し、外部メッセージを学級文化に翻訳した。\\n\\nお金ゲームでは6年生でも予想以上の盛り上がりを引き出し、男女・関係性を超えたじゃんけんが自然発生。給食当番・席替えを完全くじ引きで子どもに委ねる枠組みも提示し、**「自由は使いこなせれば持続する」**という長期視点を学級に植え付けた。\\n\\n算数(4組)では文字と式の第一次を**「丸と三角がXとYになっただけ」**と既習との地続きで導入、後半けテぶれで自走に移す二段構え。算数(2組)では役割を**「教える人」から「リズムを保つ人」**にシフトし、震源地ゲームで関係温度を上げた。\\n\\n連休明けの「内側の温度が低い日」を**否定せず承認する**ことで、翌日以降の動機の地盤を守った1日。完成度の高い再起動デー。",
+    "generatedAt": "2026-05-12T19:30:00.000Z",
+    "source": "claude-chat-preseed"
+  }
+}`);
+
+/* 起動時にPRESEEDをlocalStorageへ反映
+   - PRESEED由来(source="claude-chat-preseed")のエントリは常に最新で上書き
+   - ユーザー手動取り込み(source="claude-chat")のエントリは保護
+   - 既存エントリのsourceが未設定の場合も上書き（旧データを最新で置き換え）
+*/
+function seedPreloadedAnalyses() {
+  const existing = getAllAiAnalyses();
+  let changed = false;
+  for (const date in PRESEEDED_AI_ANALYSES) {
+    const cur = existing[date];
+    const isUserImport = cur && cur.source === "claude-chat";
+    if (!isUserImport) {
+      existing[date] = PRESEEDED_AI_ANALYSES[date];
+      changed = true;
+    }
+  }
+  if (changed) localStorage.setItem(AI_ANALYSIS_KEY, JSON.stringify(existing));
+}
+
+/* AI分析の保存・取得（日単位） */
+function getAllAiAnalyses() {
+  try {
+    return JSON.parse(localStorage.getItem(AI_ANALYSIS_KEY) || "{}");
+  } catch (e) {
+    return {};
+  }
+}
+function getAiAnalysisByDate(dateStr) {
+  return getAllAiAnalyses()[dateStr] || null;
+}
+function saveAiAnalysis(dateStr, payload) {
+  const all = getAllAiAnalyses();
+  all[dateStr] = payload;
+  localStorage.setItem(AI_ANALYSIS_KEY, JSON.stringify(all));
+}
+function deleteAiAnalysis(dateStr) {
+  const all = getAllAiAnalyses();
+  delete all[dateStr];
+  localStorage.setItem(AI_ANALYSIS_KEY, JSON.stringify(all));
+}
+
+/* AI分析の保存・取得（期間単位） */
+function getAllAiRangeAnalyses() {
+  try {
+    return JSON.parse(localStorage.getItem(AI_RANGE_ANALYSIS_KEY) || "{}");
+  } catch (e) {
+    return {};
+  }
+}
+function getAiRangeAnalysis(key) {
+  return getAllAiRangeAnalyses()[key] || null;
+}
+function saveAiRangeAnalysis(key, payload) {
+  const all = getAllAiRangeAnalyses();
+  all[key] = payload;
+  localStorage.setItem(AI_RANGE_ANALYSIS_KEY, JSON.stringify(all));
+}
+
+/* JSON抽出（前後に余計な文字や```json```フェンスが混じった場合に備える） */
+function extractJsonObject(text) {
+  if (!text) return null;
+  const fence = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  const candidate = fence ? fence[1] : text;
+  const start = candidate.indexOf("{");
+  const end = candidate.lastIndexOf("}");
+  if (start === -1 || end === -1 || end <= start) return null;
+  const slice = candidate.slice(start, end + 1);
+  try {
+    return JSON.parse(slice);
+  } catch (e) {
+    return null;
+  }
 }
 
 /* GitHub Contents API: ファイル取得 */
@@ -3171,7 +3531,7 @@ function renderCalendar() {
   for (let d = 1; d <= lastDate; d++) {
     const date = new Date(year, month, d);
     const dateStr = formatDate(date);
-    const hasData = !!getDataByDate(dateStr);
+    const hasData = !!getDataByDate(dateStr) || !!getAiAnalysisByDate(dateStr);
     const hasPhoto = getPhotosForDate(dateStr).length > 0;
 
     const cell = document.createElement("div");
@@ -3217,7 +3577,7 @@ function renderDetail() {
     case "day":   renderDayDetail(card); break;
     case "week":  renderRangeDetail(card, getWeekRange(selectedDate), "週"); break;
     case "month": renderRangeDetail(card, getMonthRange(selectedDate), "月"); break;
-    case "half":  renderRangeDetail(card, getHalfRange(selectedDate), "半年"); break;
+    case "term":  renderRangeDetail(card, getTermRange(selectedDate), getTermLabel(selectedDate)); break;
     case "year":  renderRangeDetail(card, getYearRange(selectedDate), "年間"); break;
   }
 
@@ -3246,18 +3606,21 @@ function bindDrillDownEvents() {
 function renderDayDetail(card) {
   const data = getDataByDate(selectedDate);
   const photos = getPhotosForDate(selectedDate);
+  const ai = getAiAnalysisByDate(selectedDate);
 
   if (!data) {
-    // データがなくても写真追加はできる
+    // データがなくても写真追加・AI分析はできる
     card.innerHTML = `
       <div class="detail-header">
         <div>
           <div class="detail-date">${formatDateJP(selectedDate)}</div>
-          <p style="color:#7f8c8d; font-size:0.9em; margin-top:4px;">分析データはまだありません</p>
+          <p style="color:#7f8c8d; font-size:0.9em; margin-top:4px;">${ai ? "AI分析あり" : "分析データはまだありません"}</p>
         </div>
       </div>
+      ${renderAiAnalysisSection(selectedDate, ai)}
       ${renderPhotoSection(selectedDate, photos)}`;
     bindPhotoEvents();
+    bindAiAnalysisEvents();
     return;
   }
 
@@ -3274,7 +3637,7 @@ function renderDayDetail(card) {
       </div>
     </div>
 
-    <!-- 基本の分析セクション -->
+    <!-- 基本の分析セクション（過去の手動分析データ） -->
     ${renderSection("よかったところ", data.good, data.good_detail, `${data.date}-good`)}
     ${renderSection("改善点", data.improve, data.improve_detail, `${data.date}-improve`)}
     ${renderSection("成長の記録", data.growth, data.growth_detail, `${data.date}-growth`)}
@@ -3284,10 +3647,185 @@ function renderDayDetail(card) {
     <!-- ★ 動機×自己調整の研究視点による分析 -->
     ${renderResearchLensBlock(data)}
 
+    <!-- AI分析セクション（文字起こしから自動生成） -->
+    ${renderAiAnalysisSection(selectedDate, ai)}
+
     <!-- 写真は分析データの後ろ -->
     ${renderPhotoSection(selectedDate, photos)}
   `;
   bindPhotoEvents();
+  bindAiAnalysisEvents();
+}
+
+/* ============================================================
+   🤖 Claude分析セクション（日単位）— チャットからJSON取り込み
+   ============================================================ */
+function renderAiAnalysisSection(dateStr, ai) {
+  const subjects = (ai && ai.subjects) || [];
+
+  const importArea = `
+    <div style="background:#fff7f0; border:1.5px dashed #fde7c5; border-radius:8px; padding:14px; margin-top:10px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <strong style="color:#2c3e50; font-size:0.95em;">📥 Claudeの分析を貼り付け</strong>
+        <span style="font-size:0.78em; color:#95a5a6;">type:"daily"</span>
+      </div>
+      <p style="font-size:0.82em; color:#5a6c7d; margin:0 0 8px; line-height:1.6;">
+        Claudeとのチャットで文字起こしを渡し、返ってきた<strong>JSON全文</strong>をここに貼り付けてください（${formatDateJP(dateStr)}用）。
+      </p>
+      <textarea id="aiImportInput" placeholder='{"type":"daily","date":"${dateStr}","subjects":[...]}' style="width:100%; min-height:120px; padding:10px; border:1.5px solid #fde7c5; border-radius:6px; font-size:0.85em; line-height:1.5; font-family:'Menlo','Consolas',monospace; margin-bottom:10px;"></textarea>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button id="aiImportBtn" style="flex:1; min-width:140px; padding:10px 14px; background:#f39c12; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.9em;">📥 取り込む</button>
+        ${ai ? `<button id="aiDeleteBtn" style="padding:10px 14px; background:#ecf0f1; color:#7f8c8d; border:none; border-radius:6px; cursor:pointer; font-size:0.85em;">🗑 この日の分析を削除</button>` : ""}
+      </div>
+      <div id="aiImportStatus" style="font-size:0.8em; color:#5a6c7d; margin-top:8px; min-height:1em;"></div>
+    </div>`;
+
+  if (subjects.length === 0) {
+    return `
+      <div class="section">
+        <div class="section-title">🤖 Claude授業分析</div>
+        <div class="section-content" style="color:#7f8c8d; font-size:0.9em;">この日の分析はまだありません。Claudeとのチャットで文字起こしを渡し、JSONをここに貼り付けてください。</div>
+        ${importArea}
+      </div>`;
+  }
+
+  // 分析結果の表示
+  const generatedAtText = ai.generatedAt ? `（${new Date(ai.generatedAt).toLocaleString("ja-JP", { month:"short", day:"numeric", hour:"2-digit", minute:"2-digit" })} 取り込み）` : "";
+  const daySummaryBlock = ai.day_summary ? `
+    <div style="background:#f5f7ff; border-left:3px solid #667eea; border-radius:0 6px 6px 0; padding:12px 14px; margin:10px 0;">
+      <div style="font-weight:700; color:#2c3e50; margin-bottom:6px; font-size:0.95em;">📌 1日のまとめ</div>
+      <div style="font-size:0.92em; line-height:1.7; color:#34495e;">${formatDetailText(ai.day_summary)}</div>
+    </div>` : "";
+
+  const subjectBlocks = subjects.map((s, idx) => {
+    const sid = `${dateStr}-ai-${idx}`;
+    return `
+      <div style="background:#fafbfc; border:1px solid #e1e8ed; border-radius:8px; padding:12px 14px; margin-top:10px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+          <strong style="color:#2c3e50; font-size:1em;">📚 ${escapeHtml(s.subject || "不明")}</strong>
+          ${typeof s.positive_count === "number" ? `<span class="badge badge-positive" style="font-size:0.75em;">⭐ ${s.positive_count}回</span>` : ""}
+        </div>
+        ${renderSection("よかったところ", s.good, s.good_detail, `${sid}-good`)}
+        ${renderSection("成長の記録", s.growth, s.growth_detail, `${sid}-growth`)}
+        ${renderSection("次への課題", s.next, s.next_detail, `${sid}-next`)}
+        ${renderSection("やりたさ・動機", s.motivation, s.motivation_detail, `${sid}-motivation`)}
+        ${s.hypothesis ? `<div style="background:#fff8e1; border-left:3px solid #f39c12; padding:10px 12px; margin-top:8px; border-radius:0 4px 4px 0; font-size:0.9em; line-height:1.6;"><strong>仮説：</strong>${formatDetailText(s.hypothesis)}</div>` : ""}
+      </div>`;
+  }).join("");
+
+  return `
+    <div class="section">
+      <div class="section-title">🤖 Claude授業分析 <span style="font-weight:400; font-size:0.75em; color:#95a5a6;">${generatedAtText}</span></div>
+      ${daySummaryBlock}
+      ${subjectBlocks}
+      ${importArea}
+    </div>`;
+}
+
+function escapeHtml(str) {
+  if (str == null) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function bindAiAnalysisEvents() {
+  const btn = document.getElementById("aiImportBtn");
+  if (btn) {
+    btn.addEventListener("click", importClaudeAnalysisFromText);
+  }
+  const delBtn = document.getElementById("aiDeleteBtn");
+  if (delBtn) {
+    delBtn.addEventListener("click", () => {
+      if (confirm("この日のClaude分析を削除しますか？")) {
+        deleteAiAnalysis(selectedDate);
+        renderDetail();
+        renderCalendar();
+      }
+    });
+  }
+}
+
+/* 📥 ClaudeのJSON分析を取り込み（日次 or 期間を type で振り分け） */
+function importClaudeAnalysisFromText() {
+  const ta = document.getElementById("aiImportInput");
+  const status = document.getElementById("aiImportStatus");
+  const raw = (ta.value || "").trim();
+  if (!raw) {
+    status.style.color = "#e74c3c";
+    status.textContent = "JSONを貼り付けてください。";
+    return;
+  }
+  const parsed = extractJsonObject(raw);
+  if (!parsed) {
+    status.style.color = "#e74c3c";
+    status.textContent = "JSONとして解釈できませんでした。形式を確認してください。";
+    return;
+  }
+  try {
+    const result = applyImportedAnalysis(parsed);
+    status.style.color = "#27ae60";
+    status.textContent = result.message;
+    ta.value = "";
+    renderDetail();
+    renderCalendar();
+  } catch (e) {
+    status.style.color = "#e74c3c";
+    status.textContent = `取り込み失敗：${e.message}`;
+    console.error(e);
+  }
+}
+
+/* JSON payload を type に応じて保存 */
+function applyImportedAnalysis(parsed) {
+  // type省略時は subjects があれば daily、result があれば range と推定
+  let type = parsed.type;
+  if (!type) {
+    if (Array.isArray(parsed.subjects)) type = "daily";
+    else if (parsed.result) type = "range";
+  }
+
+  if (type === "daily") {
+    if (!Array.isArray(parsed.subjects)) throw new Error("subjects配列がありません。");
+    const date = parsed.date || selectedDate;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error(`日付の形式が不正です: ${date}`);
+    const payload = {
+      transcript: parsed.transcript || "",
+      reflection: parsed.reflection || "",
+      subjects: parsed.subjects,
+      day_summary: parsed.day_summary || "",
+      generatedAt: parsed.generatedAt || new Date().toISOString(),
+      source: "claude-chat"
+    };
+    saveAiAnalysis(date, payload);
+    return { type: "daily", date, message: `✅ ${date} に ${parsed.subjects.length}教科の分析を取り込みました。` };
+  }
+
+  if (type === "range") {
+    const period = parsed.period;
+    const rangeStart = parsed.rangeStart;
+    const rangeEnd = parsed.rangeEnd;
+    const subject = parsed.subject;
+    const label = parsed.label || `${rangeStart}〜${rangeEnd}`;
+    if (!period || !rangeStart || !rangeEnd || !subject) {
+      throw new Error("period / rangeStart / rangeEnd / subject が必要です。");
+    }
+    const cacheKey = `${period}-${rangeStart}_${rangeEnd}-${subject}`;
+    const payload = {
+      subject, label,
+      result: parsed.result || parsed,
+      dailyCount: parsed.dailyCount || 0,
+      generatedAt: parsed.generatedAt || new Date().toISOString(),
+      source: "claude-chat"
+    };
+    saveAiRangeAnalysis(cacheKey, payload);
+    return { type: "range", cacheKey, message: `✅ ${label}・${subject} の期間分析を取り込みました。` };
+  }
+
+  throw new Error(`type が不明です（"daily" または "range" を指定してください）。`);
 }
 
 /* ===== 写真セクションのHTML ===== */
@@ -3899,12 +4437,15 @@ function renderRangeDetail(card, range, label) {
     </div>`;
 
   if (items.length === 0) {
+    // 過去の手動分析データはないが、AI日次分析が範囲内にある可能性があるので AI期間分析セクションは表示する
     card.innerHTML = header + `
-      <div class="empty-state">
+      <div class="empty-state" style="padding:24px 16px;">
         <div class="icon">📭</div>
-        <h3>この${label}には分析データがありません</h3>
-        <p>カレンダーから別の${label}を選ぶか、データを追加してください。</p>
-      </div>`;
+        <h3 style="font-size:1.05em;">この${escapeHtml(label)}には過去の手動分析データがありません</h3>
+        <p style="font-size:0.88em;">日表示でAI分析を作っていれば、下の「AI期間分析」から教科別の集約が出せます。</p>
+      </div>
+      ${renderAiRangeSection(range, label)}`;
+    bindAiRangeEvents();
     return;
   }
 
@@ -3956,9 +4497,9 @@ function renderRangeDetail(card, range, label) {
   // ⑧ ★ 動機×自己調整の研究分析
   const researchBlock = renderResearchAnalysis(items);
 
-  // ⑨ 改善サイクル分析（半年/年のみ）
+  // ⑨ 改善サイクル分析（学期/年のみ）
   let trendBlock = "";
-  if (currentPeriod === "half" || currentPeriod === "year") {
+  if (currentPeriod === "term" || currentPeriod === "year") {
     trendBlock = renderLongTermTrend(items, label);
   }
 
@@ -3985,9 +4526,13 @@ function renderRangeDetail(card, range, label) {
       <div class="entry-list" style="margin-top:8px;">${entries}</div>
     </div>`;
 
+  // 🤖 AI期間分析（日次AI分析を教科別に集約）
+  const aiRangeBlock = renderAiRangeSection(range, label);
+
   card.innerHTML = header + summary + narrativeBlock + autonomyChartBlock
     + highlightsBlock + fbChartBlock + pedagogyBlock + keywordBlock
-    + researchBlock + trendBlock + entryListBlock;
+    + researchBlock + trendBlock + aiRangeBlock + entryListBlock;
+  bindAiRangeEvents();
 }
 
 /* === ★ 期間の動機×自己調整 研究分析ブロック === */
@@ -4511,11 +5056,185 @@ function getMonthRange(dateStr) {
   const end = new Date(d.getFullYear(), d.getMonth() + 1, 0);
   return { start, end };
 }
-function getHalfRange(dateStr) {
+/* 学期：1学期=4-7月、2学期=9-12月、3学期=1-3月（4月始まり学年） */
+function getTermInfo(dateStr) {
   const d = new Date(dateStr);
-  const start = new Date(d); start.setMonth(d.getMonth() - 5); start.setDate(1);
-  const end = new Date(d.getFullYear(), d.getMonth() + 1, 0);
-  return { start, end };
+  const month = d.getMonth() + 1; // 1〜12
+  const year = d.getFullYear();
+  if (month >= 4 && month <= 7) {
+    return { termNumber: 1, startYear: year, start: new Date(year, 3, 1), end: new Date(year, 6, 31) };
+  } else if (month >= 9 && month <= 12) {
+    return { termNumber: 2, startYear: year, start: new Date(year, 8, 1), end: new Date(year, 11, 31) };
+  } else if (month >= 1 && month <= 3) {
+    return { termNumber: 3, startYear: year - 1, start: new Date(year, 0, 1), end: new Date(year, 2, 31) };
+  } else {
+    // 8月（夏休み）: 直前の1学期に紐付け
+    return { termNumber: 1, startYear: year, start: new Date(year, 3, 1), end: new Date(year, 6, 31) };
+  }
+}
+function getTermRange(dateStr) {
+  const info = getTermInfo(dateStr);
+  return { start: info.start, end: info.end };
+}
+function getTermLabel(dateStr) {
+  const info = getTermInfo(dateStr);
+  return `${info.startYear}年度 ${info.termNumber}学期`;
+}
+
+/* 範囲内の日次AI分析を取得 */
+function getAiAnalysesInRange(start, end) {
+  const all = getAllAiAnalyses();
+  const result = [];
+  for (const dateStr in all) {
+    const d = new Date(dateStr);
+    if (d >= start && d <= end) {
+      result.push({ date: dateStr, payload: all[dateStr] });
+    }
+  }
+  result.sort((a, b) => a.date.localeCompare(b.date));
+  return result;
+}
+
+/* AI期間分析セクションを描画（Claudeチャット由来のJSON取り込み版） */
+function renderAiRangeSection(range, label) {
+  const rangeStartStr = formatDate(range.start);
+  const rangeEndStr = formatDate(range.end);
+  const rangeKey = `${currentPeriod}-${rangeStartStr}_${rangeEndStr}`;
+
+  // この期間のAI日次分析（教科ごとに集計）
+  const aiAnalysesInRange = getAiAnalysesInRange(range.start, range.end);
+  const bySubject = {};
+  aiAnalysesInRange.forEach(({date, payload}) => {
+    (payload.subjects || []).forEach(s => {
+      if (!s.subject) return;
+      if (!bySubject[s.subject]) bySubject[s.subject] = [];
+      bySubject[s.subject].push({ date, ...s });
+    });
+  });
+  const subjectsAll = Array.from(new Set([...SUBJECT_LIST, ...Object.keys(bySubject)]));
+  const subjectsWithData = subjectsAll.filter(s => bySubject[s] && bySubject[s].length > 0);
+
+  // 既に取り込み済みの期間分析（この期間に関する任意の教科）
+  const allRange = getAllAiRangeAnalyses();
+  const cachedHere = Object.keys(allRange)
+    .filter(k => k.startsWith(`${currentPeriod}-${rangeStartStr}_${rangeEndStr}-`))
+    .map(k => ({ key: k, payload: allRange[k] }));
+
+  const dailyOverviewHtml = subjectsWithData.length > 0 ? `
+    <div style="background:#f5f7ff; border-radius:6px; padding:10px 12px; margin-top:8px; font-size:0.85em; line-height:1.7;">
+      <strong>📊 この期間の日次分析サマリ：</strong><br>
+      ${subjectsWithData.map(s => `${escapeHtml(s)}：日次${bySubject[s].length}件`).join(" / ")}
+    </div>
+  ` : `
+    <div style="color:#7f8c8d; font-size:0.85em; margin-top:8px;">この期間にはまだClaude日次分析がありません。</div>
+  `;
+
+  const cachedBlocks = cachedHere.map(({key, payload}) => `
+    <div style="background:#fafbfc; border:1px solid #e1e8ed; border-radius:8px; padding:12px 14px; margin-top:10px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <strong style="color:#2c3e50;">📚 ${escapeHtml(payload.subject || "")} <span style="font-weight:400; font-size:0.82em; color:#95a5a6;">（${payload.label || ""}）</span></strong>
+        <button class="ai-range-delete-btn" data-cache-key="${escapeHtml(key)}" style="padding:4px 10px; background:#ecf0f1; color:#7f8c8d; border:none; border-radius:5px; cursor:pointer; font-size:0.78em;">🗑 削除</button>
+      </div>
+      ${renderAiRangeResult(payload, key)}
+    </div>
+  `).join("");
+
+  const importArea = `
+    <div style="background:#fff7f0; border:1.5px dashed #fde7c5; border-radius:8px; padding:14px; margin-top:10px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <strong style="color:#2c3e50; font-size:0.95em;">📥 Claudeの期間分析を貼り付け</strong>
+        <span style="font-size:0.78em; color:#95a5a6;">type:"range"</span>
+      </div>
+      <p style="font-size:0.82em; color:#5a6c7d; margin:0 0 8px; line-height:1.6;">
+        Claudeとのチャットで「${escapeHtml(label)}の○○（教科）をまとめて」と頼んで、返ってきたJSONを貼り付けてください。
+        <br><span style="color:#95a5a6; font-size:0.92em;">period=${currentPeriod} / rangeStart=${rangeStartStr} / rangeEnd=${rangeEndStr}</span>
+      </p>
+      <textarea id="aiRangeImportInput" placeholder='{"type":"range","period":"${currentPeriod}","rangeStart":"${rangeStartStr}","rangeEnd":"${rangeEndStr}","subject":"国語","label":"${escapeHtml(label)}","result":{...}}' style="width:100%; min-height:120px; padding:10px; border:1.5px solid #fde7c5; border-radius:6px; font-size:0.85em; line-height:1.5; font-family:'Menlo','Consolas',monospace; margin-bottom:10px;"></textarea>
+      <button id="aiRangeImportBtn" style="width:100%; padding:10px 14px; background:#f39c12; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.9em;">📥 取り込む</button>
+      <div id="aiRangeImportStatus" style="font-size:0.8em; color:#5a6c7d; margin-top:8px; min-height:1em;"></div>
+    </div>`;
+
+  return `
+    <div class="section">
+      <div class="section-title">🤖 Claude期間分析（${escapeHtml(label)}・教科別）</div>
+      ${dailyOverviewHtml}
+      ${cachedBlocks}
+      ${importArea}
+    </div>`;
+}
+
+/* AI期間分析結果の表示 */
+function renderAiRangeResult(payload, sid) {
+  const r = payload.result || {};
+  const generatedAtText = payload.generatedAt ? `（${new Date(payload.generatedAt).toLocaleString("ja-JP", { month:"short", day:"numeric", hour:"2-digit", minute:"2-digit" })} 生成・日次${payload.dailyCount}件から）` : "";
+
+  const turningPointsHtml = (Array.isArray(r.turning_points) && r.turning_points.length > 0)
+    ? `<div style="background:#fff8e1; border-left:3px solid #f39c12; padding:10px 12px; margin-top:8px; border-radius:0 4px 4px 0;">
+        <strong style="font-size:0.9em;">🔀 ターニングポイント</strong>
+        <ul style="margin:6px 0 0 18px; font-size:0.88em; line-height:1.6;">
+          ${r.turning_points.map(tp => `<li>${formatDetailText(tp)}</li>`).join("")}
+        </ul>
+      </div>`
+    : "";
+
+  return `
+    <div style="margin-top:8px; font-size:0.85em; color:#95a5a6;">${generatedAtText}</div>
+    ${renderSection("よかったところ", r.good, r.good_detail, `${sid}-r-good`)}
+    ${renderSection("成長の軌跡", r.growth, r.growth_detail, `${sid}-r-growth`)}
+    ${renderSection("次への課題", r.next, r.next_detail, `${sid}-r-next`)}
+    ${renderSection("動機の波", r.motivation, r.motivation_detail, `${sid}-r-motivation`)}
+    ${r.trajectory ? `<div style="background:#f5f7ff; border-left:3px solid #667eea; padding:10px 12px; margin-top:8px; border-radius:0 4px 4px 0;"><strong style="font-size:0.9em;">📈 軌跡</strong><div style="font-size:0.88em; line-height:1.7; margin-top:6px;">${formatDetailText(r.trajectory)}</div></div>` : ""}
+    ${turningPointsHtml}
+    ${r.hypothesis ? `<div style="background:#fffbe6; border-left:3px solid #e67e22; padding:10px 12px; margin-top:8px; border-radius:0 4px 4px 0; font-size:0.9em; line-height:1.6;"><strong>仮説：</strong>${formatDetailText(r.hypothesis)}</div>` : ""}
+  `;
+}
+
+/* AI期間分析のボタン配線（取り込みボタン＋既存分析の削除ボタン） */
+function bindAiRangeEvents() {
+  const importBtn = document.getElementById("aiRangeImportBtn");
+  if (importBtn) {
+    importBtn.addEventListener("click", importClaudeRangeAnalysisFromText);
+  }
+  document.querySelectorAll(".ai-range-delete-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const cacheKey = btn.dataset.cacheKey;
+      if (confirm("この期間分析を削除しますか？")) {
+        const all = getAllAiRangeAnalyses();
+        delete all[cacheKey];
+        localStorage.setItem(AI_RANGE_ANALYSIS_KEY, JSON.stringify(all));
+        renderDetail();
+      }
+    });
+  });
+}
+
+function importClaudeRangeAnalysisFromText() {
+  const ta = document.getElementById("aiRangeImportInput");
+  const status = document.getElementById("aiRangeImportStatus");
+  const raw = (ta.value || "").trim();
+  if (!raw) {
+    status.style.color = "#e74c3c";
+    status.textContent = "JSONを貼り付けてください。";
+    return;
+  }
+  const parsed = extractJsonObject(raw);
+  if (!parsed) {
+    status.style.color = "#e74c3c";
+    status.textContent = "JSONとして解釈できませんでした。";
+    return;
+  }
+  try {
+    if (!parsed.type) parsed.type = "range";
+    const result = applyImportedAnalysis(parsed);
+    status.style.color = "#27ae60";
+    status.textContent = result.message;
+    ta.value = "";
+    renderDetail();
+  } catch (e) {
+    status.style.color = "#e74c3c";
+    status.textContent = `取り込み失敗：${e.message}`;
+    console.error(e);
+  }
 }
 function getYearRange(dateStr) {
   const d = new Date(dateStr);
@@ -5369,15 +6088,17 @@ document.getElementById("bulkSyncBtn").addEventListener("click", bulkUploadAllLo
   } catch (e) {
     console.error("ストレージ初期化失敗:", e);
   }
+  // 事前生成済みのClaude分析をseed（既存編集は上書きしない）
+  try { seedPreloadedAnalyses(); } catch (e) { console.warn("PRESEED失敗:", e); }
   updatePatStatus();
 
   // 起動時：今日の日付の月を表示
   const today = new Date();
   currentDate = new Date(today.getFullYear(), today.getMonth(), 1);
 
-  // 今日のデータがあれば選択、なければ未選択（今日の月を表示するだけ）
+  // 今日のデータ（手動分析またはAI分析）があれば選択、なければ未選択
   const todayStr = formatDate(today);
-  if (getDataByDate(todayStr)) {
+  if (getDataByDate(todayStr) || getAiAnalysisByDate(todayStr)) {
     selectedDate = todayStr;
   } else {
     selectedDate = null;
